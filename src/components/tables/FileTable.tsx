@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect } from "react";
-import { Button, Table } from "antd";
+import { Button, Table, Tooltip } from "antd";
 import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
@@ -99,46 +99,61 @@ const columns: ColumnsType<FileTableDataType> = [
       switch (value) {
         case "untracked":
           return (
-            <Button type="primary" icon={<PlusOutlined />}>
-              Add
-            </Button>
+            <Tooltip title="Adding the file into a staging area">
+              <Button type="primary" icon={<PlusOutlined />}>
+                Add
+              </Button>
+            </Tooltip>
           );
 
         case "modified":
           return (
             <ActionWrapper>
-              <Button type="primary" icon={<PlusOutlined />}>
-                Add
-              </Button>
-              <Button icon={<RedoOutlined />}>
-                Restore
-              </Button>
+              <Tooltip title="Adding the file into a staging area">
+                <Button type="primary" icon={<PlusOutlined />}>
+                  Add
+                </Button>
+              </Tooltip>
+
+              <Tooltip title="Undoing the modification">
+                <Button icon={<RedoOutlined />}>
+                  Restore
+                </Button>
+              </Tooltip>
             </ActionWrapper>
           );
 
         case "staged":
           return (
             <ActionWrapper>
-              <Button icon={<RedoOutlined />}>
-                Restore
-              </Button>
+              <Tooltip title="Unstaging changes">
+                <Button icon={<RedoOutlined />}>
+                  Restore
+                </Button>
+              </Tooltip>
             </ActionWrapper>
           );
 
         case "committed":
           return (
             <ActionWrapper>
-              <Button icon={<DeleteOutlined />} danger>
-                Untrake
-              </Button>
+              <Tooltip title=" Untracking file">
+                <Button icon={<DeleteOutlined />} danger>
+                  Untrake
+                </Button>
+              </Tooltip>
 
-              <Button type="primary" icon={<DeleteOutlined />} danger>
-                Delete
-              </Button>
-
-              <Button icon = {<EditOutlined />} >
-                Rename
-              </Button>
+              <Tooltip title="Deleting file">
+                <Button type="primary" icon={<DeleteOutlined />} danger>
+                  Delete
+                </Button>
+              </Tooltip>
+              
+              <Tooltip title="Renaming file">
+                <Button icon = {<EditOutlined />} >
+                  Rename
+                </Button>
+              </Tooltip>
             </ActionWrapper>
           );
       }
