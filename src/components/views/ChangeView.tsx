@@ -30,7 +30,7 @@ const Separator = styled.div`
   width: 100%;
 `;
 
-const ChangeTitle = styled.h3`
+const Title = styled.h3`
   margin-bottom: 10px;
   font-size: 18px;
   text-align: left;
@@ -68,6 +68,8 @@ export default function ChangeView(props: ChangeViewProps) {
 
   return (
     <Container>
+      <Title style={{ fontSize: "20px" }}>Commit</Title>
+
       <CommitMessageInput placeholder="Enter commit message" />
 
       <Popconfirm
@@ -85,7 +87,7 @@ export default function ChangeView(props: ChangeViewProps) {
 
       <Separator />
 
-        <ChangeTitle style={{ fontSize: "20px" }}>Changes</ChangeTitle>
+        <Title style={{ fontSize: "20px" }}>Changes</Title>
 
         <ChangesContainerWrapper>
             <ChangesContainer>
