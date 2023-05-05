@@ -1,7 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
-import { Input, Button } from "antd";
-
+import { Input, Button, Popconfirm } from "antd";
 
 const Container = styled.div`
   width: 100%;
@@ -52,13 +51,39 @@ const ChangesContainer = styled.div`
 interface ChangeViewProps {}
 
 export default function ChangeView(props: ChangeViewProps) {
+  const [confirmVisible, setConfirmVisible] = useState(false);
+
+  const handleCommit = () => {
+    setConfirmVisible(true);
+  };
+
+  const handleConfirm = () => {
+    setConfirmVisible(false);
+    console.log("커밋됨");
+  };
+
+  const handleCancel = () => {
+    setConfirmVisible(false);
+  };
+
   return (
     <Container>
-        <CommitMessageInput placeholder="Enter commit message" />
+      <CommitMessageInput placeholder="Enter commit message" />
 
-        <CommitButton type="primary">Commit</CommitButton>
+      <Popconfirm
+        title="Commit?"
+        visible={confirmVisible}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        okText="확인"
+        cancelText="취소"
+      >
+        <CommitButton type="primary" onClick={handleCommit}>
+          Commit
+        </CommitButton>
+      </Popconfirm>
 
-        <Separator />
+      <Separator />
 
         <ChangeTitle style={{ fontSize: "20px" }}>Changes</ChangeTitle>
 
