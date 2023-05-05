@@ -16,7 +16,7 @@ const StyledSider = styled(AntdSider)`
 
 const ViewContainer = styled.div`
   padding: 10px;
-  height: calc(100% - 500px);
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;

@@ -19,7 +19,7 @@ export default function App() {
         <BaseLayout type={type}>
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<IndexPage />} />
+              <Route path="/*" element={<IndexPage />} />
             </Routes>
           </BrowserRouter>
         </BaseLayout>

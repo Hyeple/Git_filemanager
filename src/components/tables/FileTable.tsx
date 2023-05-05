@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useCallback, useEffect } from "react";
 import { Button, Table } from "antd";
 import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
+import { useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
 const NameWrapper = styled.div`
   display: flex;
@@ -127,14 +129,13 @@ const columns: ColumnsType<FileTableDataType> = [
 ];
 
 const data: FileTableDataType[] = [
-  //현재 mock 데이터
   {
     key: "1",
     name: {
       fileName: "test.tsx",
       type: "untracked",
     },
-    size: 21231231325,
+    size: 325,
     lastModified: "2023-05-05",
     action: "untracked",
   },
@@ -144,7 +145,7 @@ const data: FileTableDataType[] = [
       fileName: "test.js",
       type: "modified",
     },
-    size: 234234,
+    size: 325,
     lastModified: "2023-05-05",
     action: "modified",
   },
@@ -164,7 +165,7 @@ const data: FileTableDataType[] = [
       fileName: "test.go",
       type: "committed",
     },
-    size: 35235235,
+    size: 325,
     lastModified: "2023-05-05",
     action: "committed",
   },
@@ -173,7 +174,7 @@ const data: FileTableDataType[] = [
     name: {
       fileName: "readme.MD",
     },
-    size: 625,
+    size: 325,
     lastModified: "2023-05-05",
   },
 ];
@@ -181,6 +182,17 @@ const data: FileTableDataType[] = [
 interface FileTableProps {}
 
 export default function FileTable(props: FileTableProps) {
+  const { pathname } = useLocation();
+
+  const fetchApi = useCallback(() => {
+    // NOTE: pathname을 가지고 API 요청을 보내는 코드를 짠다.
+    console.log(pathname);
+  }, [pathname]);
+
+  useEffect(() => {
+    fetchApi();
+  }, [pathname]);
+
   return (
     <Table
       columns={columns}
