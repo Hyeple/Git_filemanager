@@ -8,10 +8,9 @@ const Container = styled.button`
   display: flex;
   justify-content: center;
   align-items: center;
-  border: none;
+  border: 1px solid rgb(240, 240, 240);
   border-radius: 4px;
-  cursor: pointer;
-  background-color: #fff;
+  background-color: rgb(249, 251, 255);
 `;
 
 const InnerContainer = styled.div`
@@ -34,7 +33,7 @@ const Icon = styled(AntdFolderAddOutlined)`
 const TextContainer = styled.div``;
 
 const Text = styled.button`
-  background-color: #fff;
+  background-color: rgb(249, 251, 255);
   color: #000000;
   border: none;
   border-radius: 4px;

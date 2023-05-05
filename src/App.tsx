@@ -11,7 +11,8 @@ import { SiderType } from "./components/common/Sider";
 const queryClient = new QueryClient();
 
 export default function App() {
-  const [type, setType] = useState<SiderType>("create");
+  //사이드바 create, change 화면 변경
+  const [type, setType] = useState<SiderType>("change");
 
   return (
     <ConfigProvider theme={THEME}>

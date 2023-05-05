@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { HEADER_HEIGHT } from "../../utils/values";
 import { useMemo } from "react";
 import CreateGitRepositoryView from "../views/CreateGitRepositoryView";
+import ChangeView from "../views/ChangeView";
 
 const { Sider: AntdSider } = Layout;
 
@@ -22,7 +23,7 @@ const ViewContainer = styled.div`
   align-items: center;
 `;
 
-export type SiderType = "create" | "add";
+export type SiderType = "create" | "change";
 
 interface SiderProps {
   type: SiderType;
@@ -33,12 +34,8 @@ export default function Sider({ type }: SiderProps) {
     switch (type) {
       case "create":
         return <CreateGitRepositoryView />;
-      case "add":
-        return (
-          <>
-            <span>add view</span>
-          </>
-        );
+      case "change":
+        return <ChangeView />;
     }
   }, [type]);
 

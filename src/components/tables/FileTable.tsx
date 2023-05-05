@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 const NameWrapper = styled.div`
   display: flex;
   align-items: center;
+  
   gap: 6px;
 `;
 const ActionWrapper = styled.div`
