@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect } from "react";
-import { Button, Table, Tooltip } from "antd";
+import { Modal, Button, Table, Tooltip } from "antd";
 import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
