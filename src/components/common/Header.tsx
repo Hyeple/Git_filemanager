@@ -18,7 +18,7 @@ const InnerContainer = styled.div`
 
 const Title = styled.span`
   font-weight: 600;
-  font-size: 24px;
+  font-size: 26px;
 `;
 
 interface HeaderProps {

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect } from "react";
 import { Button, Table } from "antd";
-import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone } from "@ant-design/icons";
+import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
@@ -18,7 +18,8 @@ const ActionWrapper = styled.div`
   gap: 6px;
 `;
 
-type FileType = "untracked" | "modified" | "staged" | "committed";
+//파일 타입 받아오기 (폴더인지, 파일인지, (이건 깃 레포가 아닐 때)      언트랙인지, 모디파이드인지, 스테이징인지 커밋된건지 (이건 깃 레포일 때))
+type FileType =  "folder" | "file" | "untracked" | "modified" | "staged" | "committed";
 type NameType = {
   fileName: string;
   type?: FileType;
@@ -34,6 +35,10 @@ interface FileTableDataType {
 
 const getFileIcon = (type: FileType) => {
   switch (type) {
+    case "folder":
+      return <FolderTwoTone twoToneColor = "lightgray" style = {{ fontSize: 24}}/>;
+    case "file" :
+      return <FileTextTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
     case "untracked":
       return <FileTextTwoTone twoToneColor="#1677ff" style={{ fontSize: 24 }} />;
     case "modified":
@@ -52,7 +57,7 @@ const columns: ColumnsType<FileTableDataType> = [
     key: "name",
     render: (value: NameType) => {
       if (!value) {
-        return "-";
+        return "";
       }
 
       const { fileName, type } = value;
@@ -83,12 +88,12 @@ const columns: ColumnsType<FileTableDataType> = [
     key: "lastModified",
   },
   {
-    title: "Action",
+    title: "Git Action",
     dataIndex: "action",
     key: "action",
     render: (value: FileType) => {
       if (!value) {
-        return "-";
+        return "";
       }
 
       switch (value) {
@@ -98,28 +103,41 @@ const columns: ColumnsType<FileTableDataType> = [
               Add
             </Button>
           );
+
         case "modified":
           return (
             <ActionWrapper>
               <Button type="primary" icon={<PlusOutlined />}>
                 Add
               </Button>
-              <Button icon={<RedoOutlined />}>Restore</Button>
-            </ActionWrapper>
-          );
-        case "staged":
-          return (
-            <ActionWrapper>
-              <Button type="primary" icon={<DeleteOutlined />} danger>
-                Delete
+              <Button icon={<RedoOutlined />}>
+                Restore
               </Button>
             </ActionWrapper>
           );
+
+        case "staged":
+          return (
+            <ActionWrapper>
+              <Button icon={<RedoOutlined />}>
+                Restore
+              </Button>
+            </ActionWrapper>
+          );
+
         case "committed":
           return (
             <ActionWrapper>
               <Button icon={<DeleteOutlined />} danger>
-                Untraking file
+                Untrake
+              </Button>
+
+              <Button type="primary" icon={<DeleteOutlined />} danger>
+                Delete
+              </Button>
+
+              <Button icon = {<EditOutlined />} >
+                Rename
               </Button>
             </ActionWrapper>
           );
@@ -128,53 +146,65 @@ const columns: ColumnsType<FileTableDataType> = [
   },
 ];
 
+//우선 들어있는건 mock. API로 파일 리스트 받아오면 됨.
+//백에서 파일목록은 이름 순으로 정렬해서 넘겨주세요.
 const data: FileTableDataType[] = [
   {
     key: "1",
     name: {
-      fileName: "test.tsx",
-      type: "untracked",
+      fileName: "test folder",
+      type: "folder",
     },
-    size: 325,
+    size: 123123325,
     lastModified: "2023-05-05",
-    action: "untracked",
   },
   {
     key: "2",
     name: {
-      fileName: "test.js",
-      type: "modified",
+      fileName: "test.tsx",
+      type: "untracked",
     },
-    size: 325,
+    size: 123123325,
     lastModified: "2023-05-05",
-    action: "modified",
+    action: "untracked",
   },
   {
     key: "3",
     name: {
-      fileName: "test.py",
-      type: "staged",
+      fileName: "test.js",
+      type: "modified",
     },
-    size: 325,
+    size: 25,
     lastModified: "2023-05-05",
-    action: "staged",
+    action: "modified",
   },
   {
     key: "4",
     name: {
-      fileName: "test.go",
-      type: "committed",
+      fileName: "test.py",
+      type: "staged",
     },
-    size: 325,
+    size: 322315,
     lastModified: "2023-05-05",
-    action: "committed",
+    action: "staged",
   },
   {
     key: "5",
     name: {
-      fileName: "readme.MD",
+      fileName: "test.go",
+      type: "committed",
     },
-    size: 325,
+    size: 321115,
+    lastModified: "2023-05-05",
+    action: "committed",
+  },
+  {
+    key: "6",
+    name: {
+      fileName: "readme.MD",
+      type: "file",
+    },
+    size: 12325,
     lastModified: "2023-05-05",
   },
 ];
