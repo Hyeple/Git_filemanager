@@ -12,7 +12,7 @@ const queryClient = new QueryClient();
 
 export default function App() {
   //사이드바 create, change 화면 변경
-  const [type, setType] = useState<SiderType>("create");
+  const [type, setType] = useState<SiderType>("change");
 
   return (
     <ConfigProvider theme={THEME}>
