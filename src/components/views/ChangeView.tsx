@@ -52,6 +52,7 @@ interface ChangeViewProps {}
 
 export default function ChangeView(props: ChangeViewProps) {
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [commitMessage, setCommitMessage] = useState("");
 
   const handleCommit = () => {
     setConfirmVisible(true);
@@ -59,7 +60,7 @@ export default function ChangeView(props: ChangeViewProps) {
 
   const handleConfirm = () => {
     setConfirmVisible(false);
-    console.log("커밋됨");
+    console.log("커밋 메시지:", commitMessage);
   };
 
   const handleCancel = () => {
@@ -70,7 +71,11 @@ export default function ChangeView(props: ChangeViewProps) {
     <Container>
       <Title style={{ fontSize: "20px" }}>Commit</Title>
 
-      <CommitMessageInput placeholder="Enter commit message" />
+      <CommitMessageInput
+        placeholder="Enter commit message"
+        value={commitMessage}
+        onChange={(e) => setCommitMessage(e.target.value)}
+      />
 
       <Popconfirm
         title="Commit?"
