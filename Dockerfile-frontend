@@ -1,0 +1,10 @@
+# 프론트엔드용 Dockerfile
+
+# Nginx 베이스 이미지 사용
+FROM nginx:alpine
+
+# Nginx 설정 복사
+COPY default.conf /etc/nginx/conf.d/default.conf
+
+# 프론트엔드 코드 복사
+COPY frontend/build/ /usr/share/nginx/html/
