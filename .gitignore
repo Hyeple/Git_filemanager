@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ### JetBrains template
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio
 
@@ -47,6 +48,9 @@ crashlytics.properties
 crashlytics-build.properties
 
 # Created by .ignore support plugin (hsz.mobi)
+=======
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+>>>>>>> 5f84dc30349026fd47a01d288ad3dd0b06eee366
 
 # dependencies
 /node_modules
@@ -72,4 +76,5 @@ yarn-error.log*
 
 # jetbrains environment files
 .idea
+/.idea
 /.idea
