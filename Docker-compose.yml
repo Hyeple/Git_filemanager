@@ -17,6 +17,6 @@ services:
     volumes:
       - ./frontend/build:/usr/share/nginx/html
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
       - backend

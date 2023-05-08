@@ -3,10 +3,24 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi import Query
-import os
 from pathlib import Path
+from fastapi.middleware.cors import CORSMiddleware
+from typing import List
+from pydantic import BaseModel
+import os
+import locale
+import datetime
 
 app = FastAPI()
+
+origins = ["http://localhost", "http://localhost:3000", ...] # 허용할 origin 주소들을 리스트로 입력합니다.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.mount("/frontend/static", StaticFiles(directory="frontend/build/static"), name="static")
 
@@ -18,25 +32,36 @@ async def catch_all(path: str):
 async def read_root():
     return FileResponse("frontend/build/index.html")
 
+from typing import List
+import locale
 
-# file listing 
-@app.get("/root-directory")
-async def get_root_directory():
-    root_directory = os.path.abspath(os.sep)
-    return {"root_directory": root_directory}
+class FileItem(BaseModel):
+    key: int
+    name: str
+    type: str
+    size: int
+    last_modified: str
 
-@app.get("/api/files")
-async def get_files(path: str):
-    try:
-        file_list = os.listdir(path)
-        file_list_with_type = []
-        for file_name in file_list:
-            file_path = os.path.join(path, file_name)
-            file_type = "directory" if os.path.isdir(file_path) else "file"
-            file_list_with_type.append({"name": file_name, "type": file_type})
-        return file_list_with_type
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+def sort_key(item: FileItem) -> str:
+    locale.setlocale(locale.LC_COLLATE, 'ko_KR.UTF-8')
+    return locale.strxfrm(item.name)
+
+@app.get("/api/root_files", response_model=List[FileItem])
+async def get_root_files():
+    root_files = []
+    root_drives = ['C:', 'D:']
+
+    for drive in root_drives:
+        with os.scandir(drive) as entries:
+            for entry in entries:
+                file_type = "folder" if entry.is_dir() else "file"
+                file_size = entry.stat().st_size
+                last_modified = datetime.datetime.fromtimestamp(
+                    entry.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+                root_files.append(FileItem(key=len(root_files), name=entry.name, type=file_type, size=file_size, last_modified=last_modified))
+
+    root_files.sort(key=sort_key)
+    return root_files
 
 
 ## 밑에 부분은 쿼리 받으면 동작하는 코드들. 쿼리문 바뀌면 다시 바꿔서 테스트 해보겠습니다.
