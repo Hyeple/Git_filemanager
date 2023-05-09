@@ -164,33 +164,53 @@ const columns: ColumnsType<FileTableDataType> = [
 
 interface FileTableProps {}
 
+//api 요청으로 백엔드에서 file list 호출
+async function fetchFiles() {
+  try {
+    const response = await fetch("/api/root_files?path=/C:/");
+
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data)) {
+      throw new Error("Data is not an array");
+    }
+
+    console.log("Response data:", data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching files:", error);
+    return [];
+  }
+}
+
 export default function FileTable(props: FileTableProps) {
   const { pathname } = useLocation();
   const [fileList, setFileList] = useState<FileTableDataType[]>([]);
 
-  // FileTable.tsx
-const fetchApi = useCallback(() => {
-  fetch('http://localhost:8000/api/root_files')
-    .then((response) => response.json())
-    .then((data) => {
-      const files = data.map((item: any) => ({
-        key: item.key,
-        name: {
-          fileName: item.name,
-          type: item.type,
-        },
-        size: item.size,
-        lastModified: item.last_modified,
-      }));
-      // 정렬된 key 값으로 새로운 배열을 생성하고 그 배열에 파일/폴더 데이터를 저장합니다.
-      const sortedFiles = Array.from({ length: files.length }).map((_, index) => files.find((file: FileTableDataType) => file.key === index));
-      setFileList(sortedFiles);
-    });
-}, [pathname]);
+  const fetchApi = useCallback(async () => {
+    const data = await fetchFiles();
+    const files = data.map((item: any) => ({
+      key: item.key,
+      name: {
+        fileName: item.name,
+        type: item.type,
+      },
+      size: item.size,
+      lastModified: item.last_modified,
+    }));
+  
+    // 정렬된 key 값으로 새로운 배열을 생성하고 그 배열에 파일/폴더 데이터를 저장합니다.
+    const sortedFiles = Array.from({ length: files.length }).map((_, index) => files.find((file: FileTableDataType) => file.key === index)).filter((file: FileTableDataType | undefined) => file !== undefined);
+    setFileList(sortedFiles as FileTableDataType[]);
+  }, [pathname]);    
 
   useEffect(() => {
     fetchApi();
-  }, [pathname]);
+  }, [fetchApi]);
 
   return (
     <Table

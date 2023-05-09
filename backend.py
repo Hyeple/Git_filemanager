@@ -10,10 +10,14 @@ from pydantic import BaseModel
 import os
 import locale
 import datetime
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
-origins = ["http://localhost", "http://localhost:3000", ...] # 허용할 origin 주소들을 리스트로 입력합니다.
+# 허용할 origin 주소들을 리스트로 입력합니다.
+origins = ["http://localhost", "http://localhost:3000", "http://localhost:8000", ...] 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -32,9 +36,6 @@ async def catch_all(path: str):
 async def read_root():
     return FileResponse("frontend/build/index.html")
 
-from typing import List
-import locale
-
 class FileItem(BaseModel):
     key: int
     name: str
@@ -47,22 +48,23 @@ def sort_key(item: FileItem) -> str:
     return locale.strxfrm(item.name)
 
 @app.get("/api/root_files", response_model=List[FileItem])
-async def get_root_files():
-    root_files = []
-    root_drives = ['C:', 'D:']
+async def get_files(path: str):
+    directory = os.path.abspath(os.path.join("/", path))
+    files = []
+    
+    with os.scandir(directory) as entries:
+        for entry in entries:
+            if entry.name.startswith(".") or entry.name == "__pycache__" or entry.name.startswith("$"):
+                continue
+            
+            file_type = "folder" if entry.is_dir() else "file"
+            file_size = entry.stat().st_size
+            last_modified = datetime.datetime.fromtimestamp(entry.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+            
+            files.append(FileItem(key=len(files), name=entry.name, type=file_type, size=file_size, last_modified=last_modified))
 
-    for drive in root_drives:
-        with os.scandir(drive) as entries:
-            for entry in entries:
-                file_type = "folder" if entry.is_dir() else "file"
-                file_size = entry.stat().st_size
-                last_modified = datetime.datetime.fromtimestamp(
-                    entry.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
-                root_files.append(FileItem(key=len(root_files), name=entry.name, type=file_type, size=file_size, last_modified=last_modified))
-
-    root_files.sort(key=sort_key)
-    return root_files
-
+    files.sort(key=sort_key)
+    return files
 
 ## 밑에 부분은 쿼리 받으면 동작하는 코드들. 쿼리문 바뀌면 다시 바꿔서 테스트 해보겠습니다.
 

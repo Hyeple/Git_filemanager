@@ -6,16 +6,19 @@ services:
       context: .
       dockerfile: Dockerfile-backend
     volumes:
-      - ./:/app
+      - /c/:/app
     ports:
       - "8000:8000"
+    environment:
+      - ORIGINS=http://localhost,http://localhost:3000,http://localhost:8000
+
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile-frontend
     volumes:
-      - ./frontend/build:/usr/share/nginx/html
+       - /c/frontend/build:/usr/share/nginx/html
     ports:
       - "3000:80"
     depends_on:
