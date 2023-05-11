@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Query
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
+from urllib.parse import unquote
 from typing import List
 from pydantic import BaseModel
 import os
@@ -16,8 +17,8 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
-# 허용할 origin 주소들을 리스트로 입력합니다.
-origins = ["http://localhost", "http://localhost:3000", "http://localhost:8000", ...] 
+# 허용할 origin 주소들을 리스트로 입력합니다.(CORS setting)
+origins = ["http://localhost", "http://localhost:3000", "http://localhost:8000", ...]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -28,43 +29,59 @@ app.add_middleware(
 
 app.mount("/frontend/static", StaticFiles(directory="frontend/build/static"), name="static")
 
-@app.get("/{path:path}", include_in_schema=False)
-async def catch_all(path: str):
-    return FileResponse("frontend/build/index.html")
-
-@app.get("/")
-async def read_root():
-    return FileResponse("frontend/build/index.html")
-
 class FileItem(BaseModel):
     key: int
     name: str
     type: str
-    size: int
+    size: float  # change int to float for large file sizes
     last_modified: str
+
 
 def sort_key(item: FileItem) -> str:
     locale.setlocale(locale.LC_COLLATE, 'ko_KR.UTF-8')
     return locale.strxfrm(item.name)
 
+
 @app.get("/api/root_files", response_model=List[FileItem])
 async def get_files(path: str):
-    directory = os.path.abspath(os.path.join("/", path))
-    files = []
-    
-    with os.scandir(directory) as entries:
-        for entry in entries:
-            if entry.name.startswith(".") or entry.name == "__pycache__" or entry.name.startswith("$"):
-                continue
-            
-            file_type = "folder" if entry.is_dir() else "file"
-            file_size = entry.stat().st_size
-            last_modified = datetime.datetime.fromtimestamp(entry.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
-            
-            files.append(FileItem(key=len(files), name=entry.name, type=file_type, size=file_size, last_modified=last_modified))
+    path = unquote(path)
+    path = os.path.normpath(path)
 
-    files.sort(key=sort_key)
-    return files
+    try:
+        logging.info(f"Received path: {path}")
+        directory = os.path.abspath(os.path.join("/", path))
+
+        if not os.path.exists(directory):
+            raise HTTPException(status_code=404, detail="Directory not found")
+
+        files = []
+
+        with os.scandir(directory) as entries:
+            for entry in entries:
+                if entry.name.startswith(".") or entry.name == "__pycache__" or entry.name.startswith("$"):
+                    continue
+
+                file_type = "folder" if entry.is_dir() else "file"
+                file_size = entry.stat().st_size
+                last_modified = datetime.datetime.fromtimestamp(
+                    entry.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+
+                files.append(FileItem(key=len(files), name=entry.name, type=file_type, size=file_size, last_modified=last_modified))
+
+        files.sort(key=sort_key)
+        return files
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/{path:path}", include_in_schema=False)
+async def catch_all(path: str):
+    return FileResponse("frontend/build/index.html")
+
+
+@app.get("/")
+async def read_root():
+    return FileResponse("frontend/build/index.html")
 
 ## 밑에 부분은 쿼리 받으면 동작하는 코드들. 쿼리문 바뀌면 다시 바꿔서 테스트 해보겠습니다.
 

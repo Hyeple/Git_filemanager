@@ -79,7 +79,7 @@ export default function ChangeView(props: ChangeViewProps) {
 
       <Popconfirm
         title="Commit?"
-        visible={confirmVisible}
+        open={confirmVisible}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
         okText="확인"

@@ -167,9 +167,10 @@ interface FileTableProps {}
 //api 요청으로 백엔드에서 file list 호출
 async function fetchFiles() {
   try {
-    const response = await fetch("/api/root_files?path=/C:/");
+    const path = encodeURIComponent("C://");
+    const response = await fetch(`/api/root_files?path=${path}`);
 
-    if (!response.ok) {
+    if (!response.ok && response.status !== 304) {
       throw new Error(`API request failed with status ${response.status}`);
     }
 
@@ -180,12 +181,14 @@ async function fetchFiles() {
     }
 
     console.log("Response data:", data);
+
     return data;
   } catch (error) {
     console.error("Error fetching files:", error);
     return [];
   }
 }
+
 
 export default function FileTable(props: FileTableProps) {
   const { pathname } = useLocation();
