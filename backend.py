@@ -238,6 +238,20 @@ async def git_mv(repo_path: str = Body(...), old_path: str = Body(...), new_path
     return {"message": "File renamed"}
 
 
+# with commit, browser must show list of staged changes
+# get staged changes for list 
+@app.get("/staged_changes")
+async def get_staged_changes(path: str = Query(...)):
+    try:
+        repo = Repo(path)
+        diff_staged = repo.index.diff("HEAD")
+        staged_changes = [d.a_path for d in diff_staged]
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    return {"staged_changes": staged_changes}
+
+
 # "/" >> starting file browser in root directory
 # when rendering directory (& files), we must check whether
 # the directory created git repository or not >> '/is_repo'
