@@ -54,6 +54,7 @@ async def get_files(path: str):
         if not os.path.exists(directory):
             raise HTTPException(status_code=404, detail="Directory not found")
 
+        folders = []
         files = []
 
         with os.scandir(directory) as entries:
@@ -66,10 +67,16 @@ async def get_files(path: str):
                 last_modified = datetime.datetime.fromtimestamp(
                     entry.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
 
-                files.append(FileItem(key=len(files), name=entry.name, type=file_type, size=file_size, last_modified=last_modified))
+                if file_type == "folder":
+                    folders.append(FileItem(key=len(files), name=entry.name, type=file_type, size=file_size, last_modified=last_modified))
+                else:
+                    files.append(FileItem(key=len(files), name=entry.name, type=file_type, size=file_size, last_modified=last_modified))
 
+        folders.sort(key=sort_key)
         files.sort(key=sort_key)
-        return files
+
+        return folders + files
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -225,10 +225,8 @@ export default function FileTable(props: FileTableProps) {
       lastModified: item.last_modified,
     }));
   
-    // 정렬된 key 값으로 새로운 배열을 생성하고 그 배열에 파일/폴더 데이터를 저장합니다.
-    const sortedFiles = Array.from({ length: files.length }).map((_, index) => files.find((file: FileTableDataType) => file.key === index)).filter((file: FileTableDataType | undefined) => file !== undefined);
-    setFileList(sortedFiles as FileTableDataType[]);
-  }, [pathname]);    
+    setFileList(files as FileTableDataType[]);
+  }, [pathname]);     
 
   useEffect(() => {
     fetchApi();
