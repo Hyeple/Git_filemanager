@@ -170,6 +170,17 @@ async def init_repo(path: str):
 
     return {"message": "Git repository initialized"}
 
+#git commit >> git commit -m "message"
+@app.post("/git_commit")
+async def git_commit(path: str, message: str):
+    try:
+        repo = Repo(path)
+        repo.git.commit('-m', message)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    return {"message": "Changes committed"}
+
 ## 밑에 부분은 쿼리 받으면 동작하는 코드들. 쿼리문 바뀌면 다시 바꿔서 테스트 해보겠습니다.
 
 ## file upload
