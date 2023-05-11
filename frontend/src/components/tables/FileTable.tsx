@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Modal, Button, Table, Tooltip } from "antd";
 import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
@@ -162,87 +162,63 @@ const columns: ColumnsType<FileTableDataType> = [
   },
 ];
 
-//우선 들어있는건 mock. API로 파일 리스트 받아오면 됨.
-//백에서 파일목록은 이름 순으로 정렬해서 넘겨주세요.
-const data: FileTableDataType[] = [
-  {
-    key: "1",
-    name: {
-      fileName: "test folder",
-      type: "folder",
-    },
-    size: 123123325,
-    lastModified: "2023-05-05",
-  },
-  {
-    key: "2",
-    name: {
-      fileName: "test.tsx",
-      type: "untracked",
-    },
-    size: 123123325,
-    lastModified: "2023-05-05",
-    action: "untracked",
-  },
-  {
-    key: "3",
-    name: {
-      fileName: "test.js",
-      type: "modified",
-    },
-    size: 25,
-    lastModified: "2023-05-05",
-    action: "modified",
-  },
-  {
-    key: "4",
-    name: {
-      fileName: "test.py",
-      type: "staged",
-    },
-    size: 322315,
-    lastModified: "2023-05-05",
-    action: "staged",
-  },
-  {
-    key: "5",
-    name: {
-      fileName: "test.go",
-      type: "committed",
-    },
-    size: 321115,
-    lastModified: "2023-05-05",
-    action: "committed",
-  },
-  {
-    key: "6",
-    name: {
-      fileName: "readme.MD",
-      type: "file",
-    },
-    size: 12325,
-    lastModified: "2023-05-05",
-  },
-];
-
 interface FileTableProps {}
+
+//api 요청으로 백엔드에서 file list 호출
+async function fetchFiles() {
+  try {
+    const path = encodeURIComponent("C://");
+    const response = await fetch(`/api/root_files?path=${path}`);
+
+    if (!response.ok && response.status !== 304) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data)) {
+      throw new Error("Data is not an array");
+    }
+
+    console.log("Response data:", data);
+
+    return data;
+  } catch (error) {
+    console.error("Error fetching files:", error);
+    return [];
+  }
+}
+
 
 export default function FileTable(props: FileTableProps) {
   const { pathname } = useLocation();
+  const [fileList, setFileList] = useState<FileTableDataType[]>([]);
 
-  const fetchApi = useCallback(() => {
-    // NOTE: pathname을 가지고 API 요청을 보내는 코드를 짠다.
-    console.log(pathname);
-  }, [pathname]);
+  const fetchApi = useCallback(async () => {
+    const data = await fetchFiles();
+    const files = data.map((item: any) => ({
+      key: item.key,
+      name: {
+        fileName: item.name,
+        type: item.type,
+      },
+      size: item.size,
+      lastModified: item.last_modified,
+    }));
+  
+    // 정렬된 key 값으로 새로운 배열을 생성하고 그 배열에 파일/폴더 데이터를 저장합니다.
+    const sortedFiles = Array.from({ length: files.length }).map((_, index) => files.find((file: FileTableDataType) => file.key === index)).filter((file: FileTableDataType | undefined) => file !== undefined);
+    setFileList(sortedFiles as FileTableDataType[]);
+  }, [pathname]);    
 
   useEffect(() => {
     fetchApi();
-  }, [pathname]);
+  }, [fetchApi]);
 
   return (
     <Table
       columns={columns}
-      dataSource={data}
+      dataSource={fileList}
       pagination={{
         current: 1,
         defaultCurrent: 1,

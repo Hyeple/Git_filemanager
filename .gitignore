@@ -53,7 +53,7 @@ crashlytics-build.properties
 >>>>>>> 5f84dc30349026fd47a01d288ad3dd0b06eee366
 
 # dependencies
-/node_modules
+/frontend/node_modules
 /.pnp
 .pnp.js
 
