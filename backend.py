@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi import Query
+from fastapi import Body
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from git import Repo, GitCommandError, InvalidGitRepositoryError
@@ -181,21 +182,93 @@ async def git_commit(path: str, message: str):
 
     return {"message": "Changes committed"}
 
-## 밑에 부분은 쿼리 받으면 동작하는 코드들. 쿼리문 바뀌면 다시 바꿔서 테스트 해보겠습니다.
+# git add actives for modified files and unctracked files
+# we can know success about this activation for return message
+@app.post("/git_add")
+async def git_add(path: str = Body(...), file: str = Body(...)):
+    try:
+        repo = Repo(path)
+        repo.git.add(file)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
-## file upload
-# @app.post("/upload/")
-# async def upload_file(file: UploadFile = File(...)):
-#     with open(f"static/{file.filename}", "wb") as f:
-#         f.write(await file.read())
-#     return {"filename": file.filename}
+    return {"message": "File added to staging area"}
+
+# git restore and git rm have optional menu
+# >> git restore --staged && git rm --cached
+
+# staged var have default value false >> true: git restore --staged
+# we may add path exception handling
+@app.post("/git_restore")
+async def git_restore(path: str = Body(...), file: str = Body(...), staged: bool = Body(False)):
+    try:
+        repo = Repo(path)
+        if staged:
+            repo.git.restore(file, staged=True)
+        else:
+            repo.git.restore(file)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    return {"message": "File restored"}
+
+# it has same optional handler with git restore
+@app.post("/git_rm")
+async def git_rm(path: str = Body(...), file: str = Body(...), cached: bool = Body(False)):
+    try:
+        repo = Repo(path)
+        if cached:
+            repo.git.rm(file, cached=True)
+        else:
+            repo.git.rm(file)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    return {"message": "File removed"}
+
+# repo_path: repository / old_path: old name / new_path: new name
+@app.post("/git_mv")
+async def git_mv(repo_path: str = Body(...), old_path: str = Body(...), new_path: str = Body(...)):
+    try:
+        repo = Repo(repo_path)
+        repo.git.mv(old_path, new_path)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    return {"message": "File renamed"}
 
 
-##file delete
-# @app.delete("/delete/{filename}")
-# async def delete_file(filename: str):
-#     if os.path.exists(f"static/{filename}"):
-#         os.remove(f"static/{filename}")
-#         return {"status": "File deleted successfully"}
-#     else:
-#         return {"status": "File not found"}
+# "/" >> starting file browser in root directory
+# when rendering directory (& files), we must check whether
+# the directory created git repository or not >> '/is_repo'
+# >> may show different interface (in git repo or not)
+
+# if the directory is not have .git yet, we can make git repository
+# with left creation button >> we can see another interface
+# (left: commit && changes | center: modified icon with git status
+#  right: have different menu with git status) >> '/init_repo'
+
+# if we show icon of files differently, each file should get
+# own git status => return status >> '/git_status'
+# it may be have these orders
+# -> click add button >> '/git add' >> update UI >> to update UI,
+# we may check with '/git_status' >> update
+
+# version controlling
+# untracked file: git add (untracked > staged) >> '/git_add'
+
+# modified file : git add (modified > staged) >> '/git_add'
+# && git restore (modified > unmodified) >> '/git_restore'
+
+# staged file : git restore --staged (staged > modified | untracked)
+# >> '/git_restore(staged = True)'
+
+# commited or unmodified file : git rm (unmodified > remove & staged)
+# >> '/git_rm'  && git rm --cached (unmodified > untracked)
+# >> '/git_rm (cached = True)'
+# git mv >> '/git_mv' (with path)
+
+# to commit >> '/git_commit'
+# in file browser, user will write commit message and use commit button..
+# we must show the list of staged changes >> '/staged_changes'
+# and git commit and get return message >> show browser updating display
