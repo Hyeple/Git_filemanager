@@ -84,7 +84,7 @@ const columns: ColumnsType<FileTableDataType> = [
     },
   },
   {
-    title: "Last modified",
+    title: "Modified Date",
     dataIndex: "lastModified",
     key: "lastModified",
   },
@@ -162,6 +162,9 @@ const columns: ColumnsType<FileTableDataType> = [
   },
 ];
 
+
+//실제 돌아갈 코드 부분
+
 interface FileTableProps {}
 
 //api 요청으로 백엔드에서 file list 호출
@@ -192,7 +195,23 @@ async function fetchFiles() {
 
 export default function FileTable(props: FileTableProps) {
   const { pathname } = useLocation();
+  const [tableHeight, setTableHeight] = useState<number>(0);
   const [fileList, setFileList] = useState<FileTableDataType[]>([]);
+
+  const updateTableHeight = () => {
+    const windowHeight = window.innerHeight;
+    const desiredTableHeight = windowHeight - 300;
+    setTableHeight(desiredTableHeight);
+  };
+
+  useEffect(() => {
+    updateTableHeight();
+    window.addEventListener("resize", updateTableHeight);
+
+    return () => {
+      window.removeEventListener("resize", updateTableHeight);
+    };
+  }, []);
 
   const fetchApi = useCallback(async () => {
     const data = await fetchFiles();
@@ -215,17 +234,182 @@ export default function FileTable(props: FileTableProps) {
     fetchApi();
   }, [fetchApi]);
 
+
   return (
     <Table
       columns={columns}
       dataSource={fileList}
-      pagination={{
-        current: 1,
-        defaultCurrent: 1,
-        pageSize: 10,
-        defaultPageSize: 10,
-        position: ["bottomCenter"],
-      }}
+      pagination={false}
+      scroll={{ y: tableHeight }}
     />
   );
 }
+
+
+
+
+
+/*
+//프론트 테스트용 mock
+const data: FileTableDataType[] = [
+  {
+    key: "1",
+    name: {
+      fileName: "test",
+      type: "folder",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+    action: "untracked",
+  },
+  {
+    key: "2",
+    name: {
+      fileName: "test.js",
+      type: "modified",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+    action: "modified",
+  },
+  {
+    key: "3",
+    name: {
+      fileName: "test.py",
+      type: "staged",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+    action: "staged",
+  },
+  {
+    key: "4",
+    name: {
+      fileName: "test.go",
+      type: "committed",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+    action: "committed",
+  },
+  {
+    key: "5",
+    name: {
+      fileName: "readme.MD",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+  },
+  {
+    key: "6",
+    name: {
+      fileName: "readme.MD",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+  },
+  {
+    key: "7",
+    name: {
+      fileName: "readme.MD",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+  },
+  {
+    key: "8",
+    name: {
+      fileName: "readme.MD",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+  },
+  {
+    key: "9",
+    name: {
+      fileName: "readme.MD",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+  },
+  {
+    key: "10",
+    name: {
+      fileName: "readme.MD",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+  },
+  {
+    key: "11",
+    name: {
+      fileName: "readme125125.MD",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+  },
+  {
+    key: "12",
+    name: {
+      fileName: "readme123.MD",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+  },
+  {
+    key: "13",
+    name: {
+      fileName: "readme123.MD",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+  },
+  {
+    key: "14",
+    name: {
+      fileName: "readme123.MD",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+  },
+  {
+    key: "15",
+    name: {
+      fileName: "readme123.MD",
+    },
+    size: 325,
+    lastModified: "2023-05-05",
+  },
+];
+
+interface FileTableProps {}
+
+export default function FileTable(props: FileTableProps) {
+  const { pathname } = useLocation();
+  const [tableHeight, setTableHeight] = useState<number>(0);
+
+  const updateTableHeight = () => {
+    const windowHeight = window.innerHeight;
+    const desiredTableHeight = windowHeight - 300; // You can adjust this value to change the margin
+    setTableHeight(desiredTableHeight);
+  };
+
+  useEffect(() => {
+    updateTableHeight();
+    window.addEventListener("resize", updateTableHeight);
+
+    return () => {
+      window.removeEventListener("resize", updateTableHeight);
+    };
+  }, []);
+
+  return (
+    <Table
+      columns={columns}
+      dataSource={data}
+      pagination={false}
+      scroll={{ y: tableHeight }} // Use the tableHeight state here
+    />
+  );
+}
+*/
