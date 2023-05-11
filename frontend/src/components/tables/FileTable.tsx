@@ -20,10 +20,13 @@ const ActionWrapper = styled.div`
 `;
 
 //파일 타입 받아오기 (폴더인지, 파일인지, (이건 깃 레포가 아닐 때)      언트랙인지, 모디파이드인지, 스테이징인지 커밋된건지 (이건 깃 레포일 때))
-type FileType =  "folder" | "file" | "untracked" | "modified" | "staged" | "committed";
+type FileType =  "folder" | "file";
+type GitType = "untracked" | "modified" | "staged" | "committed";
+
 type NameType = {
   fileName: string;
-  type?: FileType;
+  type_file: FileType;
+  type_git?: GitType;
 };
 
 interface FileTableDataType {
@@ -34,22 +37,38 @@ interface FileTableDataType {
   action?: FileType;
 }
 
-const getFileIcon = (type: FileType) => {
-  switch (type) {
+const getFileIcon = (type1: FileType, type2?: GitType) => {
+  switch (type1) {
     case "folder":
-      return <FolderTwoTone twoToneColor = "lightgray" style = {{ fontSize: 24}}/>;
-    case "file" :
-      return <FileTextTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
-    case "untracked":
-      return <FileTextTwoTone twoToneColor="#1677ff" style={{ fontSize: 24 }} />;
-    case "modified":
-      return <FileTextTwoTone twoToneColor="#ff4d4f" style={{ fontSize: 24 }} />;
-    case "staged":
-      return <FileTextTwoTone twoToneColor="#f7f008" style={{ fontSize: 24 }} />;
-    case "committed":
-      return <FileTextTwoTone twoToneColor="#96F2D7" style={{ fontSize: 24 }} />;
+      switch (type2) {
+        case "untracked":
+          return <FolderTwoTone twoToneColor="#1677ff" style={{ fontSize: 24 }} />;
+        case "modified":
+          return <FolderTwoTone twoToneColor="#ff4d4f" style={{ fontSize: 24 }} />;
+        case "staged":
+          return <FolderTwoTone twoToneColor="#f7f008" style={{ fontSize: 24 }} />;
+        case "committed":
+          return <FolderTwoTone twoToneColor="#96F2D7" style={{ fontSize: 24 }} />;
+        default:
+          return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
+      }
+
+    case "file":
+      switch (type2) {
+        case "untracked":
+          return <FileTextTwoTone twoToneColor="#1677ff" style={{ fontSize: 24 }} />;
+        case "modified":
+          return <FileTextTwoTone twoToneColor="#ff4d4f" style={{ fontSize: 24 }} />;
+        case "staged":
+          return <FileTextTwoTone twoToneColor="#f7f008" style={{ fontSize: 24 }} />;
+        case "committed":
+          return <FileTextTwoTone twoToneColor="#96F2D7" style={{ fontSize: 24 }} />;
+        default:
+          return <FileTextTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
+      }
   }
 };
+
 
 
 //실제 돌아갈 코드 부분
@@ -108,7 +127,9 @@ export default function FileTable(props: FileTableProps) {
       key: item.key,
       name: {
         fileName: item.name,
-        type: item.type,
+        //이 부분 수정해야합니다.
+        type_file: item.type,
+        type_git: item.type,
       },
       size: item.size,
       lastModified: item.last_modified,
@@ -131,11 +152,11 @@ export default function FileTable(props: FileTableProps) {
           return "";
         }
   
-        const { fileName, type } = value;
+        const { fileName, type_file, type_git } = value;
   
         return (
-          <NameWrapper onClick={() => type === "folder" && fetchApi(record.name.fileName)}>
-            {type && getFileIcon(type)}
+          <NameWrapper onClick={() => type_file === "folder" && fetchApi(record.name.fileName)}>
+            {getFileIcon(type_file, type_git)}
             {fileName}
           </NameWrapper>
         );
@@ -162,7 +183,7 @@ export default function FileTable(props: FileTableProps) {
       title: "Git Action",
       dataIndex: "action",
       key: "action",
-      render: (value: FileType) => {
+      render: (value: GitType) => {
         if (!value) {
           return "";
         }
@@ -254,7 +275,8 @@ const data: FileTableDataType[] = [
     key: "1",
     name: {
       fileName: "test",
-      type: "folder",
+      type_file: "folder",
+      type_git: "untracked",
     },
     size: 325,
     lastModified: "2023-05-05",
@@ -264,119 +286,12 @@ const data: FileTableDataType[] = [
     key: "2",
     name: {
       fileName: "test.js",
-      type: "modified",
+      type_file: "file",
+      type_git: "modified",
     },
     size: 325,
     lastModified: "2023-05-05",
     action: "modified",
-  },
-  {
-    key: "3",
-    name: {
-      fileName: "test.py",
-      type: "staged",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-    action: "staged",
-  },
-  {
-    key: "4",
-    name: {
-      fileName: "test.go",
-      type: "committed",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-    action: "committed",
-  },
-  {
-    key: "5",
-    name: {
-      fileName: "readme.MD",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-  },
-  {
-    key: "6",
-    name: {
-      fileName: "readme.MD",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-  },
-  {
-    key: "7",
-    name: {
-      fileName: "readme.MD",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-  },
-  {
-    key: "8",
-    name: {
-      fileName: "readme.MD",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-  },
-  {
-    key: "9",
-    name: {
-      fileName: "readme.MD",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-  },
-  {
-    key: "10",
-    name: {
-      fileName: "readme.MD",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-  },
-  {
-    key: "11",
-    name: {
-      fileName: "readme125125.MD",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-  },
-  {
-    key: "12",
-    name: {
-      fileName: "readme123.MD",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-  },
-  {
-    key: "13",
-    name: {
-      fileName: "readme123.MD",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-  },
-  {
-    key: "14",
-    name: {
-      fileName: "readme123.MD",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-  },
-  {
-    key: "15",
-    name: {
-      fileName: "readme123.MD",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
   },
 ];
 
