@@ -74,6 +74,16 @@ async def get_files(path: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/{path:path}", include_in_schema=False)
+async def catch_all(path: str):
+    return FileResponse("frontend/build/index.html")
+
+
+@app.get("/")
+async def read_root():
+    return FileResponse("frontend/build/index.html")
+
+# get filelist api
 @app.get("/api/files")
 async def get_files(path: str):
     path = unquote(path)
@@ -137,14 +147,28 @@ async def get_files(path: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/{path:path}", include_in_schema=False)
-async def catch_all(path: str):
-    return FileResponse("frontend/build/index.html")
+# check is managed to git
+@app.get("/is_git_repo")
+async def is_git_repo(path: str = Query(...)):
+    try:
+        Repo(path, search_parent_directories=True)
+        return True
+    except InvalidGitRepositoryError:
+        return False
 
+# Git repo create
+# for coherence, error message can be changed for ahead code
+@app.post("/init_repo")
+async def init_repo(path: str):
+    if not os.path.exists(path) or not os.path.isdir(path):
+        return JSONResponse(content={"error": "Invalid path"}, status_code=404)
 
-@app.get("/")
-async def read_root():
-    return FileResponse("frontend/build/index.html")
+    try:
+        Repo.init(path)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    return {"message": "Git repository initialized"}
 
 ## 밑에 부분은 쿼리 받으면 동작하는 코드들. 쿼리문 바뀌면 다시 바꿔서 테스트 해보겠습니다.
 
