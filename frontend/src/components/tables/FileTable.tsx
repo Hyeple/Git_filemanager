@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 const NameWrapper = styled.div`
   display: flex;
   align-items: center;
-  
+  cursor: pointer;
   gap: 6px;
 `;
 const ActionWrapper = styled.div`
@@ -51,127 +51,16 @@ const getFileIcon = (type: FileType) => {
   }
 };
 
-const columns: ColumnsType<FileTableDataType> = [
-  {
-    title: "Name",
-    dataIndex: "name",
-    key: "name",
-    render: (value: NameType) => {
-      if (!value) {
-        return "";
-      }
-
-      const { fileName, type } = value;
-
-      return (
-        <NameWrapper>
-          {type && getFileIcon(type)}
-          {fileName}
-        </NameWrapper>
-      );
-    },
-  },
-  {
-    title: "Size",
-    dataIndex: "size",
-    key: "size",
-    render: (value) => {
-      if (!value) {
-        return "-";
-      }
-
-      return getFileSize(value);
-    },
-  },
-  {
-    title: "Modified Date",
-    dataIndex: "lastModified",
-    key: "lastModified",
-  },
-  {
-    title: "Git Action",
-    dataIndex: "action",
-    key: "action",
-    render: (value: FileType) => {
-      if (!value) {
-        return "";
-      }
-
-      switch (value) {
-        case "untracked":
-          return (
-            <Tooltip title="Adding the file into a staging area">
-              <Button type="primary" icon={<PlusOutlined />}>
-                Add
-              </Button>
-            </Tooltip>
-          );
-
-        case "modified":
-          return (
-            <ActionWrapper>
-              <Tooltip title="Adding the file into a staging area">
-                <Button type="primary" icon={<PlusOutlined />}>
-                  Add
-                </Button>
-              </Tooltip>
-
-              <Tooltip title="Undoing the modification">
-                <Button icon={<RedoOutlined />}>
-                  Restore
-                </Button>
-              </Tooltip>
-            </ActionWrapper>
-          );
-
-        case "staged":
-          return (
-            <ActionWrapper>
-              <Tooltip title="Unstaging changes">
-                <Button icon={<RedoOutlined />}>
-                  Restore
-                </Button>
-              </Tooltip>
-            </ActionWrapper>
-          );
-
-        case "committed":
-          return (
-            <ActionWrapper>
-              <Tooltip title=" Untracking file">
-                <Button icon={<DeleteOutlined />} danger>
-                  Untrake
-                </Button>
-              </Tooltip>
-
-              <Tooltip title="Deleting file">
-                <Button type="primary" icon={<DeleteOutlined />} danger>
-                  Delete
-                </Button>
-              </Tooltip>
-              
-              <Tooltip title="Renaming file">
-                <Button icon = {<EditOutlined />} >
-                  Rename
-                </Button>
-              </Tooltip>
-            </ActionWrapper>
-          );
-      }
-    },
-  },
-];
-
 
 //실제 돌아갈 코드 부분
 
 interface FileTableProps {}
 
 //api 요청으로 백엔드에서 file list 호출
-async function fetchFiles() {
+async function fetchFiles(path: string) {
   try {
-    const path = encodeURIComponent("C://");
-    const response = await fetch(`/api/root_files?path=${path}`);
+    const encodedPath = encodeURIComponent(path);
+    const response = await fetch(`/api/root_files?path=${encodedPath}`);
 
     if (!response.ok && response.status !== 304) {
       throw new Error(`API request failed with status ${response.status}`);
@@ -213,8 +102,8 @@ export default function FileTable(props: FileTableProps) {
     };
   }, []);
 
-  const fetchApi = useCallback(async () => {
-    const data = await fetchFiles();
+  const fetchApi = useCallback(async (path = "C://") => {
+    const data = await fetchFiles(path);
     const files = data.map((item: any) => ({
       key: item.key,
       name: {
@@ -231,6 +120,117 @@ export default function FileTable(props: FileTableProps) {
   useEffect(() => {
     fetchApi();
   }, [fetchApi]);
+
+  const columns: ColumnsType<FileTableDataType> = [
+    {
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
+      render: (value: NameType, record: FileTableDataType) => {
+        if (!value) {
+          return "";
+        }
+  
+        const { fileName, type } = value;
+  
+        return (
+          <NameWrapper onClick={() => type === "folder" && fetchApi(record.name.fileName)}>
+            {type && getFileIcon(type)}
+            {fileName}
+          </NameWrapper>
+        );
+      },
+    },
+    {
+      title: "Size",
+      dataIndex: "size",
+      key: "size",
+      render: (value) => {
+        if (!value) {
+          return "-";
+        }
+  
+        return getFileSize(value);
+      },
+    },
+    {
+      title: "Modified Date",
+      dataIndex: "lastModified",
+      key: "lastModified",
+    },
+    {
+      title: "Git Action",
+      dataIndex: "action",
+      key: "action",
+      render: (value: FileType) => {
+        if (!value) {
+          return "";
+        }
+  
+        switch (value) {
+          case "untracked":
+            return (
+              <Tooltip title="Adding the file into a staging area">
+                <Button type="primary" icon={<PlusOutlined />}>
+                  Add
+                </Button>
+              </Tooltip>
+            );
+  
+          case "modified":
+            return (
+              <ActionWrapper>
+                <Tooltip title="Adding the file into a staging area">
+                  <Button type="primary" icon={<PlusOutlined />}>
+                    Add
+                  </Button>
+                </Tooltip>
+  
+                <Tooltip title="Undoing the modification">
+                  <Button icon={<RedoOutlined />}>
+                    Restore
+                  </Button>
+                </Tooltip>
+              </ActionWrapper>
+            );
+  
+          case "staged":
+            return (
+              <ActionWrapper>
+                <Tooltip title="Unstaging changes">
+                  <Button icon={<RedoOutlined />}>
+                    Restore
+                  </Button>
+                </Tooltip>
+              </ActionWrapper>
+            );
+  
+          case "committed":
+            return (
+              <ActionWrapper>
+                <Tooltip title=" Untracking file">
+                  <Button icon={<DeleteOutlined />} danger>
+                    Untrake
+                  </Button>
+                </Tooltip>
+  
+                <Tooltip title="Deleting file">
+                  <Button type="primary" icon={<DeleteOutlined />} danger>
+                    Delete
+                  </Button>
+                </Tooltip>
+                
+                <Tooltip title="Renaming file">
+                  <Button icon = {<EditOutlined />} >
+                    Rename
+                  </Button>
+                </Tooltip>
+              </ActionWrapper>
+            );
+        }
+      },
+    },
+  ];
 
 
   return (
