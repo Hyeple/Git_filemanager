@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Query
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
+from git import Repo, GitCommandError, InvalidGitRepositoryError
 from urllib.parse import unquote
 from typing import List
 from pydantic import BaseModel
@@ -73,6 +74,68 @@ async def get_files(path: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/files")
+async def get_files(path: str):
+    path = unquote(path)
+    path = os.path.normpath(path)
+
+# we must choose to use path for absolute or relative path
+    try:
+        logging.info(f"Received path: {path}")
+        directory = os.path.abspath(os.path.join("/", path))
+
+        if not os.path.exists(directory):
+            raise HTTPException(status_code=404, detail="Directory not found")
+
+        # path is relative path & directory is absolute path
+        file_list = Path(path)
+        files = [
+            {
+            # if we need key value (like order), add key element
+            "name": file.name,
+            "size": file.stat().st_size,
+            "last_modified": datetime.datetime.fronttimestamp(
+                file.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            # directory: true   file: false
+            "type": file.is_dir()
+        }
+        for file in file_list.iterdir()
+        if not (file.name.startswith(".") or file.name == "__pycache__" or file.name.startswith("$"))
+        ]
+
+# search_parent_directories option is to search whether parent directory have .git or not
+# if this option is false, Repo check only this path
+        try:
+            repo = Repo(path, search_parent_directories=True)
+            is_git = True
+        except InvalidGitRepositoryError:
+            is_git = False
+
+        if is_git:
+            for file in files:
+                if not file["type"]:
+                    if file["name"] in repo.untracked_files:
+                        file["status"].append("untracked")
+
+                    diff_index = repo.index.diff(None)
+                    if file["name"] in [d.a_path for d in diff_index]:
+                        file["status"].append("modified")
+
+                    diff_staged = repo.index.diff("HEAD")
+                    if file["name"] in [d.a_path for d in diff_staged]:
+                        file["status"].append("staged")
+
+                    if not file["status"]:
+                        file["status"].append("committed")
+
+        locale.setlocale(locale.LC_COLLATE, 'ko_KR.UTF-8')
+        dir = sorted([f for f in files if os.path.isdir(os.path.join(path, f["name"]))], key=lambda x: locale.strxfrm(x["name"]))
+        file = sorted([f for f in files if os.path.isfile(os.path.join(path, f["name"]))], key=lambda x: locale.strxfrm(x["name"]))
+        entire_list = dir + file
+
+        return {"file_list": entire_list} # or entire_list
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/{path:path}", include_in_schema=False)
 async def catch_all(path: str):
