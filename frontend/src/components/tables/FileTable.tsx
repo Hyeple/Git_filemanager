@@ -81,6 +81,7 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
 
 interface FileTableProps {
   path: string
+  onPathChange: (newDir: string) => void;
 }
 
 //api 요청으로 백엔드에서 file list 호출
@@ -111,7 +112,7 @@ async function fetchFiles(path: string) {
 }
 
 
-export default function FileTable( { path }: FileTableProps) {
+export default function FileTable( { path, onPathChange }: FileTableProps) {
   const [tableHeight, setTableHeight] = useState<number>(0);
   const [fileList, setFileList] = useState<FileTableDataType[]>([]);
 
@@ -187,7 +188,13 @@ export default function FileTable( { path }: FileTableProps) {
         const normalizePath = (parts: string) => parts.replace(/\/+/g, '/');
 
         return (
-          <NameWrapper onClick={() => type_file === "folder" && fetchApi(normalizePath(`${path}/${record.name.fileName}`))}>
+          <NameWrapper onClick={() => {
+            if (type_file === "folder") {
+              const newPath = normalizePath(`${path}/${record.name.fileName}`);
+              fetchApi(newPath);
+              onPathChange(newPath);
+            }
+          }}>
             {getFileIcon(type_file, type_git)}
             {fileName}
           </NameWrapper>
