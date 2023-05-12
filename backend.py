@@ -188,8 +188,11 @@ async def init_repo(path: str):
 #git commit >> git commit -m "message"
 @app.post("/git_commit")
 async def git_commit(path: str, message: str):
+    path = unquote(path)
+    path = os.path.normpath(path)
     try:
-        repo = Repo(path)
+        directory = os.path.abspath(os.path.join("/", path))
+        repo = Repo(directory, search_parent_directories=True)
         repo.git.commit('-m', message)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
@@ -198,11 +201,16 @@ async def git_commit(path: str, message: str):
 
 # git add actives for modified files and unctracked files
 # we can know success about this activation for return message
+# path is directory of this file (absolute path) , file is fileName
 @app.post("/git_add")
-async def git_add(path: str = Body(...), file: str = Body(...)):
+async def git_add(path: str, file: str):
+    path = unquote(path)
+    path = os.path.normpath(path)
     try:
-        repo = Repo(path)
-        repo.git.add(file)
+        directory = os.path.abspath(os.path.join("/", path))
+        repo = Repo(directory, search_parent_directories=True)
+        full_path = os.path.join(directory, file)
+        repo.git.add(full_path)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
@@ -214,13 +222,17 @@ async def git_add(path: str = Body(...), file: str = Body(...)):
 # staged var have default value false >> true: git restore --staged
 # we may add path exception handling
 @app.post("/git_restore")
-async def git_restore(path: str = Body(...), file: str = Body(...), staged: bool = Body(False)):
+async def git_restore(path: str, file: str, staged: bool = False):
+    path = unquote(path)
+    path = os.path.normpath(path)
     try:
-        repo = Repo(path)
+        directory = os.path.abspath(os.path.join("/", path))
+        repo = Repo(directory, search_parent_directories=True)
+        full_path = os.path.join(directory, file)
         if staged:
-            repo.git.restore(file, staged=True)
+            repo.git.restore(full_path, staged=True)
         else:
-            repo.git.restore(file)
+            repo.git.restore(full_path)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
@@ -228,13 +240,17 @@ async def git_restore(path: str = Body(...), file: str = Body(...), staged: bool
 
 # it has same optional handler with git restore
 @app.post("/git_rm")
-async def git_rm(path: str = Body(...), file: str = Body(...), cached: bool = Body(False)):
+async def git_rm(path: str, file: str, cached: bool = False):
+    path = unquote(path)
+    path = os.path.normpath(path)
     try:
-        repo = Repo(path)
+        directory = os.path.abspath(os.path.join("/", path))
+        repo = Repo(directory, search_parent_directories=True)
+        full_path = os.path.join(directory, file)
         if cached:
-            repo.git.rm(file, cached=True)
+            repo.git.rm(full_path, cached=True)
         else:
-            repo.git.rm(file)
+            repo.git.rm(full_path)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
@@ -242,9 +258,15 @@ async def git_rm(path: str = Body(...), file: str = Body(...), cached: bool = Bo
 
 # repo_path: repository / old_path: old name / new_path: new name
 @app.post("/git_mv")
-async def git_mv(repo_path: str = Body(...), old_path: str = Body(...), new_path: str = Body(...)):
+async def git_mv(repo_path: str, old_name: str, new_name: str):
+    repo_path = unquote(repo_path)
+    repo_path = os.path.normpath(repo_path)
     try:
-        repo = Repo(repo_path)
+        directory = os.path.abspath(os.path.join("/", repo_path))
+        repo = Repo(directory, search_parent_directories=True)
+
+        old_path = os.path.join(directory, old_name)
+        new_path = os.path.join(directory, new_name)
         repo.git.mv(old_path, new_path)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
@@ -255,15 +277,21 @@ async def git_mv(repo_path: str = Body(...), old_path: str = Body(...), new_path
 # with commit, browser must show list of staged changes
 # get staged changes for list 
 @app.get("/staged_changes")
-async def get_staged_changes(path: str = Query(...)):
+async def get_staged_changes(path: str):
+    path = unquote(path)
+    path = os.path.normpath(path)
     try:
-        repo = Repo(path)
+        directory = os.path.abspath(os.path.join("/", path))
+        repo = Repo(directory, search_parent_directories=True)
         diff_staged = repo.index.diff("HEAD")
         staged_changes = [d.a_path for d in diff_staged]
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-    return {"staged_changes": staged_changes}
+# if staged_changes want to show order of fileName
+    # locale.setlocale(locale.LC_COLLATE, 'ko_KR.UTF-8')
+    # staged_changes = sorted([d.a_path for d in diff_staged], key=locale.strxfrm)
+    return staged_changes
 
 
 # "/" >> starting file browser in root directory
