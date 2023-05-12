@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from urllib.parse import unquote
 from typing import List
 from pydantic import BaseModel
+#from git import Repo, GitCommandError, InvalidGitRepositoryError
 import os
 import locale
 import datetime
@@ -71,6 +72,7 @@ async def get_files(path: str):
 
             for key, entry in enumerate(entries):
                 file_type = "folder" if entry.is_dir() else "file"
+                # Git_Type 구현 하는 방법 -> 라이브러리 쓰자
                 git_type = "null"
                 file_size = entry.stat().st_size
                 last_modified = datetime.datetime.fromtimestamp(
@@ -96,6 +98,7 @@ class Path(BaseModel):
 @app.post("/api/push_path")
 async def push_path(path: Path):
     path_stack.append(path.path)
+    logging.info(f"Path_Stack: {path_stack}") # path_stack에 push 잘 되나 출력.
     return {"message": "Path pushed successfully"}
 
 @app.post("/api/pop_path")
