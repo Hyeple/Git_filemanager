@@ -79,18 +79,19 @@ async def get_files(path: str):
             for key, entry in enumerate(entries):
                 file_type = "folder" if entry.is_dir() else "file"
                 
-                # Git_Type 인식 (코드 병합 부분)
-                if is_git and file_type == "file":
-                    diff_index = repo.index.diff(None)
-                    diff_staged = repo.index.diff("HEAD")
-                    if entry.name in [d.a_path for d in diff_staged]:
-                        git_type = "staged"
-                    elif entry.name in [d.a_path for d in diff_index]:
-                        git_type = "modified"
-                    elif entry.name in repo.untracked_files:
-                        git_type = "untracked"
-                    else:
-                        git_type = "committed"
+                # Git_Type 인식 (코드 병합 부분) git_folder
+                if is_git == True:
+                    if file_type == "folder" or "file":
+                        diff_index = repo.index.diff(None)
+                        diff_staged = repo.index.diff("HEAD")
+                        if entry.name in [d.a_path for d in diff_staged]:
+                            git_type = "staged"
+                        elif entry.name in [d.a_path for d in diff_index]:
+                            git_type = "modified"
+                        elif entry.name in repo.untracked_files:
+                            git_type = "untracked"
+                        else:
+                            git_type = "committed"
                 else:
                     git_type = "NULL"
 
@@ -99,6 +100,7 @@ async def get_files(path: str):
                     entry.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
 
                 item = FileItem(key=key, name=entry.name, file_type=file_type,git_type=git_type, size=file_size, last_modified=last_modified)
+                
                 if file_type == "folder":
                     folders.append(item)
                 else:
@@ -132,6 +134,19 @@ async def pop_path():
 async def reset_path_stack():
     path_stack.clear()  # 새로 고침하면 path_stack 초기화
     return {"message": "Path stack reset successfully"}
+
+@app.post("/init_repo")
+async def init_repo(path: str):
+    directory = os.path.abspath(os.path.join("/", path))
+    if not os.path.exists(directory) or not os.path.isdir(directory):
+        return JSONResponse(content={"error": "Invalid path"}, status_code=404)
+
+    try:
+        Repo.init(directory)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    return {"message": "Git repository initialized"}
 
 @app.get("/{path:path}", include_in_schema=False)
 async def catch_all(path: str):
