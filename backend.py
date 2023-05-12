@@ -157,9 +157,13 @@ async def get_files(path: str):
 
 # check is managed to git
 @app.get("/is_git_repo")
-async def is_git_repo(path: str = Query(...)):
+async def is_git_repo(path: str):
+    path = unquote(path)
+    path = os.path.normpath(path)
+
     try:
-        Repo(path, search_parent_directories=True)
+        directory = os.path.abspath(os.path.join("/", path))
+        Repo(directory, search_parent_directories=True)
         return True
     except InvalidGitRepositoryError:
         return False
@@ -168,11 +172,15 @@ async def is_git_repo(path: str = Query(...)):
 # for coherence, error message can be changed for ahead code
 @app.post("/init_repo")
 async def init_repo(path: str):
-    if not os.path.exists(path) or not os.path.isdir(path):
+    path = unquote(path)
+    path = os.path.normpath(path)
+
+    directory = os.path.abspath(os.path.join("/", path))
+    if not os.path.exists(directory) or not os.path.isdir(directory):
         return JSONResponse(content={"error": "Invalid path"}, status_code=404)
 
     try:
-        Repo.init(path)
+        Repo.init(directory)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
