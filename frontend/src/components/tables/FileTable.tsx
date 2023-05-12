@@ -76,9 +76,7 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
 };
 
 
-
 //실제 돌아갈 코드 부분
-
 interface FileTableProps {
   path: string
   onPathChange: (newDir: string) => void;
@@ -142,6 +140,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       },
       size: item.size,
       lastModified: item.last_modified,
+      action: item.git_type
     }));
   
     setFileList(files as FileTableDataType[]);
@@ -190,8 +189,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
         return (
           <NameWrapper onClick={() => {
             if (type_file === "folder") {
-              const newPath = normalizePath(`${path}/${record.name.fileName}`);
-              fetchApi(newPath);
+              const newPath = normalizePath(`${path}/${record.name.fileName}`); // 두 번씩 호출되는 주소를 한번으로 줄임.
               onPathChange(newPath);
             }
           }}>

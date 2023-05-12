@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from urllib.parse import unquote
 from typing import List
 from pydantic import BaseModel
-#from git import Repo, GitCommandError, InvalidGitRepositoryError
+from git import Repo, GitCommandError, InvalidGitRepositoryError
 import os
 import locale
 import datetime
@@ -35,7 +35,7 @@ class FileItem(BaseModel):
     name: str
     file_type: str
     git_type: str
-    size: float  # change int to float for large file sizes
+    size: float  # float으로 변경(int 숫자 범위)
     last_modified: str
 
 
@@ -66,14 +66,34 @@ async def get_files(path: str):
         folders = []
         files = []
 
+        try:
+            repo = Repo(directory, search_parent_directories=True)
+            is_git = True
+        except InvalidGitRepositoryError:
+            is_git = False
+
         with os.scandir(directory) as entries:
             entries = [entry for entry in entries if not entry.name.startswith(".") and not entry.name == "__pycache__" and not entry.name.startswith("$")]
             entries.sort(key=lambda entry: (not entry.is_dir(), entry.name))
 
             for key, entry in enumerate(entries):
                 file_type = "folder" if entry.is_dir() else "file"
-                # Git_Type 구현 하는 방법 -> 라이브러리 쓰자
-                git_type = "null"
+                
+                # Git_Type 인식 (코드 병합 부분)
+                if is_git and file_type == "file":
+                    diff_index = repo.index.diff(None)
+                    diff_staged = repo.index.diff("HEAD")
+                    if entry.name in [d.a_path for d in diff_staged]:
+                        git_type = "staged"
+                    elif entry.name in [d.a_path for d in diff_index]:
+                        git_type = "modified"
+                    elif entry.name in repo.untracked_files:
+                        git_type = "untracked"
+                    else:
+                        git_type = "committed"
+                else:
+                    git_type = "NULL"
+
                 file_size = entry.stat().st_size
                 last_modified = datetime.datetime.fromtimestamp(
                     entry.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
@@ -98,7 +118,7 @@ class Path(BaseModel):
 @app.post("/api/push_path")
 async def push_path(path: Path):
     path_stack.append(path.path)
-    logging.info(f"Path_Stack: {path_stack}") # path_stack에 push 잘 되나 출력.
+    logging.info(f"Path_Stack: {path_stack}")   # path_stack에 push 잘 되나 출력.
     return {"message": "Path pushed successfully"}
 
 @app.post("/api/pop_path")
@@ -107,7 +127,11 @@ async def pop_path():
         return {"path": path_stack.pop()}
     else:
         return {"message": "No more paths in the stack"}
-
+    
+@app.post("/api/reset_path_stack")
+async def reset_path_stack():
+    path_stack.clear()  # 새로 고침하면 path_stack 초기화
+    return {"message": "Path stack reset successfully"}
 
 @app.get("/{path:path}", include_in_schema=False)
 async def catch_all(path: str):
