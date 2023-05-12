@@ -23,7 +23,7 @@ const ActionWrapper = styled.div`
 
 //파일 타입 받아오기 (폴더인지, 파일인지, (이건 깃 레포가 아닐 때)      언트랙인지, 모디파이드인지, 스테이징인지 커밋된건지 (이건 깃 레포일 때))
 type FileType =  "folder" | "file";
-type GitType = "untracked" | "modified" | "staged" | "committed";
+type GitType = "null" | "untracked" | "modified" | "staged" | "committed";
 
 type NameType = {
   fileName: string;
@@ -36,7 +36,7 @@ interface FileTableDataType {
   name: NameType;
   size: number;
   lastModified: string;
-  action?: FileType;
+  action?: GitType;
 }
 
 const getFileIcon = (type1: FileType, type2?: GitType) => {
@@ -51,6 +51,8 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
           return <FolderTwoTone twoToneColor="#f7f008" style={{ fontSize: 24 }} />;
         case "committed":
           return <FolderTwoTone twoToneColor="#96F2D7" style={{ fontSize: 24 }} />;
+        case "null" :
+          return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
         default:
           return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
       }
@@ -65,6 +67,8 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
           return <FileTextTwoTone twoToneColor="#f7f008" style={{ fontSize: 24 }} />;
         case "committed":
           return <FileTextTwoTone twoToneColor="#96F2D7" style={{ fontSize: 24 }} />;
+        case "null" :
+          return <FileTextTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
         default:
           return <FileTextTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
       }
@@ -132,8 +136,8 @@ export default function FileTable( { path }: FileTableProps) {
       key: item.key,
       name: {
         fileName: item.name,
-        type_file: item.type,
-        type_git: item.type,
+        type_file: item.file_type,
+        type_git: item.git_type,
       },
       size: item.size,
       lastModified: item.last_modified,
@@ -276,6 +280,9 @@ export default function FileTable( { path }: FileTableProps) {
                 </Tooltip>
               </ActionWrapper>
             );
+
+          case "null" :
+            return "";
         }
       },
     },
@@ -288,6 +295,8 @@ export default function FileTable( { path }: FileTableProps) {
       dataSource={fileList}
       pagination={false}
       scroll={{ y: tableHeight }}
+  
+  
     />
   );
 }
