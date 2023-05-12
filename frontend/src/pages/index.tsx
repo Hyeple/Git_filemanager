@@ -4,6 +4,9 @@ import { HomeOutlined } from "@ant-design/icons";
 import FileTable from "../components/tables/FileTable";
 
 export default function IndexPage() {
+  const path = "C:\\";
+
+
   return (
     <ContentLayout
       options={[
@@ -12,7 +15,7 @@ export default function IndexPage() {
         </Button>,
       ]}
     >
-      <FileTable />
+      <FileTable path = {path}/>
     </ContentLayout>
   );
 }

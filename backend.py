@@ -23,7 +23,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -32,7 +32,8 @@ app.mount("/frontend/static", StaticFiles(directory="frontend/build/static"), na
 class FileItem(BaseModel):
     key: int
     name: str
-    type: str
+    file_type: str
+    git_type: str
     size: float  # change int to float for large file sizes
     last_modified: str
 
@@ -58,27 +59,43 @@ async def get_files(path: str):
         files = []
 
         with os.scandir(directory) as entries:
-            for entry in entries:
-                if entry.name.startswith(".") or entry.name == "__pycache__" or entry.name.startswith("$"):
-                    continue
+            entries = [entry for entry in entries if not entry.name.startswith(".") and not entry.name == "__pycache__" and not entry.name.startswith("$")]
+            entries.sort(key=lambda entry: (not entry.is_dir(), entry.name))
 
+            for key, entry in enumerate(entries):
                 file_type = "folder" if entry.is_dir() else "file"
+                #GIT_TYPE 지정하기
                 file_size = entry.stat().st_size
                 last_modified = datetime.datetime.fromtimestamp(
                     entry.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
 
+                item = FileItem(key=key, name=entry.name, file_type=file_type, size=file_size, last_modified=last_modified)
                 if file_type == "folder":
-                    folders.append(FileItem(key=len(files), name=entry.name, type=file_type, size=file_size, last_modified=last_modified))
+                    folders.append(item)
                 else:
-                    files.append(FileItem(key=len(files), name=entry.name, type=file_type, size=file_size, last_modified=last_modified))
-
-        folders.sort(key=sort_key)
-        files.sort(key=sort_key)
+                    files.append(item)
 
         return folders + files
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+path_stack = [] # path 를 저장하는 stack
+
+class Path(BaseModel):
+    path: str
+
+@app.post("/api/push_path")
+async def push_path(path: Path):
+    path_stack.append(path.path)
+    return {"message": "Path pushed successfully"}
+
+@app.post("/api/pop_path")
+async def pop_path():
+    if path_stack:
+        return {"path": path_stack.pop()}
+    else:
+        return {"message": "No more paths in the stack"}
 
 
 @app.get("/{path:path}", include_in_schema=False)
@@ -89,22 +106,3 @@ async def catch_all(path: str):
 @app.get("/")
 async def read_root():
     return FileResponse("frontend/build/index.html")
-
-## 밑에 부분은 쿼리 받으면 동작하는 코드들. 쿼리문 바뀌면 다시 바꿔서 테스트 해보겠습니다.
-
-## file upload
-# @app.post("/upload/")
-# async def upload_file(file: UploadFile = File(...)):
-#     with open(f"static/{file.filename}", "wb") as f:
-#         f.write(await file.read())
-#     return {"filename": file.filename}
-
-
-##file delete
-# @app.delete("/delete/{filename}")
-# async def delete_file(filename: str):
-#     if os.path.exists(f"static/{filename}"):
-#         os.remove(f"static/{filename}")
-#         return {"status": "File deleted successfully"}
-#     else:
-#         return {"status": "File not found"}
