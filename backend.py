@@ -34,7 +34,8 @@ app.mount("/frontend/static", StaticFiles(directory="frontend/build/static"), na
 class FileItem(BaseModel):
     key: int
     name: str
-    type: str
+    fileType: str
+    gitType: str
     size: float  # change int to float for large file sizes
     last_modified: str
 
@@ -107,19 +108,20 @@ async def get_files(path: str):
 
         # path is relative path & directory is absolute path
         file_list = Path(path)
-        files = [
-            {
-            # if we need key value (like order), add key element
-            "name": file.name,
-            "size": file.stat().st_size,
-            "last_modified": datetime.datetime.fronttimestamp(
-                file.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
-            # directory: true   file: false
-            "type": file.is_dir()
-        }
-        for file in file_list.iterdir()
-        if not (file.name.startswith(".") or file.name == "__pycache__" or file.name.startswith("$"))
-        ]
+        files = []
+        key = 0
+        for file in file_list.iterdir():
+            if not (file.name.startswith(".") or file.name == "__pycache__" or file.name.startswith("$")):
+                files.append({
+                    "key": key,
+                    "name": file.name,
+                    "size": file.stat().st_size,
+                    "last_modified": datetime.datetime.fronttimestamp(
+                        file.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+                    "fileType": "folder" if file.is_dir() else "file",
+                    "gitType": []  # empty > will get if in git repo
+                })
+                key += 1  # increase the key for next file
 
 # search_parent_directories option is to search whether parent directory have .git or not
 # if this option is false, Repo check only this path
@@ -131,27 +133,24 @@ async def get_files(path: str):
 
         if is_git:
             for file in files:
-                if not file["type"]:
-                    if file["name"] in repo.untracked_files:
-                        file["status"].append("untracked")
-
+                if file["fileType"] == "file":
                     diff_index = repo.index.diff(None)
-                    if file["name"] in [d.a_path for d in diff_index]:
-                        file["status"].append("modified")
-
                     diff_staged = repo.index.diff("HEAD")
                     if file["name"] in [d.a_path for d in diff_staged]:
-                        file["status"].append("staged")
-
-                    if not file["status"]:
-                        file["status"].append("committed")
+                        file["gitType"] = "staged"
+                    elif file["name"] in [d.a_path for d in diff_index]:
+                        file["gitType"] = "modified"
+                    elif file["name"] in repo.untracked_files:
+                        file["gitType"] = "untracked"
+                    else:
+                        file["gitType"] = "committed"
 
         locale.setlocale(locale.LC_COLLATE, 'ko_KR.UTF-8')
         dir = sorted([f for f in files if os.path.isdir(os.path.join(path, f["name"]))], key=lambda x: locale.strxfrm(x["name"]))
         file = sorted([f for f in files if os.path.isfile(os.path.join(path, f["name"]))], key=lambda x: locale.strxfrm(x["name"]))
         entire_list = dir + file
 
-        return {"file_list": entire_list} # or entire_list
+        return entire_list
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
