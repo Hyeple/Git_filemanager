@@ -44,6 +44,8 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
       switch (type2) {
         case "tracked":
           return <FolderTwoTone twoToneColor="#96F2D7" style={{ fontSize: 24 }} />;
+        case "untracked":
+          return <FolderTwoTone twoToneColor="#1677ff" style={{ fontSize: 24 }} />;
         case "null" :
           return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
         default:

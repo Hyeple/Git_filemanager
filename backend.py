@@ -95,9 +95,12 @@ async def get_files(path: str):
                             git_type = "untracked"
                         else:
                             git_type = "committed"
-
+                            
                     if file_type == "folder":
-                        if entry.name in repo.untracked_files:
+                        folder_path = entry.path
+                        folder_files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
+                        untracked_folder_files = [f for f in folder_files if os.path.relpath(f, repo.working_tree_dir).replace("\\", "/") in repo.untracked_files]
+                        if len(folder_files) == len(untracked_folder_files):
                             git_type = "untracked"
                         else : 
                             git_type = "tracked"
@@ -105,6 +108,10 @@ async def get_files(path: str):
 
                 elif is_git == False and file_type == "folder":
                     git_type = "NULL"
+
+                elif is_git == False and file_type == "file" :
+                    git_type = "NULL"
+                    
                 else:
                     git_type = "NULL"
 
