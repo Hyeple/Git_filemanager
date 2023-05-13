@@ -144,68 +144,57 @@ async def get_files(path: str):
         logging.error(f"Error occurred: {str(e)}")  # 로깅 레벨을 error로 설정
         raise HTTPException(status_code=500, detail=str(e))
 
+
 class Path(BaseModel):
     path: str
 
+# push path_stack
 @app.post("/api/push_path")
 async def push_path(path: Path):
     path_stack.append(path.path)
     logging.info(f"Path_Stack: {path_stack}")   # path_stack에 push 잘 되나 출력.
     return {"message": "Path pushed successfully"}
 
-@app.post("/api/pop_path")
-async def pop_path():
-    if path_stack:
-        path_stack.pop()
-        path_stack.pop()
-        return {"path": path_stack[-1] if path_stack else None}
-    else:
-        return {"message": "No more paths in the stack"}
 
-
-    
+# path_reset
 @app.post("/api/reset_path_stack")
 async def reset_path_stack():
     path_stack.clear()  # 새로 고침하면 path_stack 초기화
     return {"message": "Path stack reset successfully"}
 
+
+
+
+
+
+# git_init
 @app.post("/init_repo")
-async def init_repo(path: str):
-    directory = os.path.abspath(os.path.join("/", path))
-    if not os.path.exists(directory) or not os.path.isdir(directory):
-        return JSONResponse(content={"error": "Invalid path"}, status_code=404)
+async def init_repo(path: Path):
+    logging.info(f"INIT_PATH: {path}")
+    # Check if the repo_path is a valid directory
+    if not os.path.exists(path) or not os.path.isdir(path):
+        logging.error(f"INIT_PATH: {path}")
+        raise HTTPException (status_code=404, detail="Directory not found")
 
     try:
-        Repo.init(directory)
-    except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        # Initialize the directory as a git repository
+        Repo.init(path)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    return {"message": "Git repository initialized"}
+    return {"message": "Repository initialized successfully"}
 
-def is_git_repo(directory: str) -> bool:
-    git_dir = os.path.join(directory, ".git")
-    return os.path.exists(git_dir)
 
-def has_ancestor_git_repo(directory: str) -> bool:
-    current_dir = os.path.abspath(directory)
-    while current_dir != "/":  # 최상위 디렉토리에 도달할 때까지 반복
-        if is_git_repo(current_dir):
-            return True
-        current_dir = os.path.dirname(current_dir)
-    return False
 
-@app.get("/api/is_repo")
-def is_repo(directory: Optional[str] = ''):
-    if not directory:
-        return {"is_repo": False, "message": "No directory provided"}
 
-    # Check if the given directory or its ancestors are Git repositories
-    is_repo = has_ancestor_git_repo(directory)
 
-    return {"is_repo": is_repo}
+# git_add
+class AddItem(BaseModel):
+    path: str
+    file_path: str
 
 @app.post("/api/git_add")
-async def git_add(path: str, file_path: str):
+async def git_add(path: str, file_path: str): # path means git repository path. file_path means directory path.
     # Check if the path is a valid directory
     if not os.path.exists(path) or not os.path.isdir(path):
         raise HTTPException(status_code=404, detail="Directory not found")
@@ -224,6 +213,7 @@ async def git_add(path: str, file_path: str):
     return {"message": "File added successfully"}
 
 
+# git_commit
 class CommitItem(BaseModel):
     path: str
     message: str
@@ -252,6 +242,8 @@ async def commit(item: CommitItem):
 
     return {"message": "Commit successful"}
 
+
+# git_restore
 class RestoreItem(BaseModel):
     path: str
     file_path: str
@@ -274,6 +266,7 @@ async def git_restore(item: RestoreItem):
         raise HTTPException(status_code=500, detail=str(e))
     
     return {"message" : "File restored successfully."}
+
 
 @app.get("/{path:path}", include_in_schema=False)
 async def catch_all(path: str):

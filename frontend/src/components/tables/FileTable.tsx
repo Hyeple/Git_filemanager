@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Modal, Button, Table, Tooltip, Input, message } from "antd";
+import { Modal, Button, Table, Tooltip, Input, message, Checkbox } from "antd";
 import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
@@ -76,7 +76,7 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
 //실제 돌아갈 코드 부분
 interface FileTableProps {
   path: string
-  onPathChange: (newDir: string) => void;
+  onPathChange: (newDir: string) => string;
 }
 
 //api 요청으로 백엔드에서 file list 호출
@@ -114,6 +114,10 @@ export default function FileTable( { path, onPathChange}: FileTableProps) {
   const [isRenameModalVisible, setRenameModalVisible] = useState<boolean>(false);
   const [fileToRename, setFileToRename] = useState<NameType | null>(null);
   const [newName, setNewName] = useState<string>("");
+
+  const [stagedFiles, setStagedFiles] = useState<FileTableDataType[]>([]);
+  const [commitModalVisible, setCommitModalVisible] = useState<boolean>(false);
+
 
   const handleRenameClick = (record: FileTableDataType) => {
     setFileToRename(record.name);
@@ -187,10 +191,16 @@ export default function FileTable( { path, onPathChange}: FileTableProps) {
     return fileList.every((file) => file.name.type_git === 'null');
   }, [fileList]);
   
-  //
+  // git_init
   const initRepo = async () => {
+    const newPathStack = [...pathStack];
+    setPathStack(newPathStack);
+    const newPath = onPathChange(newPathStack[newPathStack.length - 1]);
+    console.log("시시발  " + newPath);
+
     try {
-      const response = await axios.post("/init_repo", { path: path }, {
+      path = newPath;
+      const response = await axios.post("/init_repo", { path: newPath }, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -199,6 +209,7 @@ export default function FileTable( { path, onPathChange}: FileTableProps) {
 
       if (response.data.message === "Git repository initialized") {
         message.success(response.data.message);
+        console.log("Success!")
         fetchApi(path); // fetch the fileList again to update the UI
       } else {
         message.error(response.data.error);
@@ -210,7 +221,65 @@ export default function FileTable( { path, onPathChange}: FileTableProps) {
     }
   };
   
+
   
+  // /api/git_add
+async function gitAdd(filePath: string) {
+  try {
+    const response = await axios.post("/api/git_add", { path, file_path: filePath }, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      withCredentials: true,
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    message.success("File added successfully");
+
+    // Fetch the file list again to update the UI.
+    fetchApi(path);
+  } catch (error) {
+    console.log("깃 add 시발  " + path);
+    console.error("Error adding file:", error);
+    message.error("An error occurred while adding the file");
+  }
+}
+
+const getStagedFiles = useCallback(() => {
+  const staged = fileList.filter(file => file.action === 'staged');
+  setStagedFiles(staged);
+}, [fileList]);
+
+const handleCommit = async () => {
+  try {
+    const response = await axios.post("/api/commit", {
+      path,
+      commit_message: newName, // Assuming newName contains the commit message
+      file_list: stagedFiles.map(file => file.name.fileName), // Extract file names from stagedFiles
+    }, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      withCredentials: true,
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    message.success("Files committed successfully");
+
+    // Fetch the file list again to update the UI.
+    fetchApi(path);
+  } catch (error) {
+    console.error("Error committing files:", error);
+    message.error("An error occurred while committing the files");
+  }
+};
+
   
 
   const columns: ColumnsType<FileTableDataType> = [
@@ -276,7 +345,7 @@ export default function FileTable( { path, onPathChange}: FileTableProps) {
           case "untracked":
             return (
               <Tooltip title="Adding the file into a staging area">
-                <Button type="primary" icon={<PlusOutlined />}>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => gitAdd(record.name.fileName)}>
                   Add
                 </Button>
               </Tooltip>
@@ -286,7 +355,7 @@ export default function FileTable( { path, onPathChange}: FileTableProps) {
             return (
               <ActionWrapper>
                 <Tooltip title="Adding the file into a staging area">
-                  <Button type="primary" icon={<PlusOutlined />}>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => gitAdd(record.name.fileName)}>
                     Add
                   </Button>
                 </Tooltip>
@@ -359,6 +428,20 @@ export default function FileTable( { path, onPathChange}: FileTableProps) {
         </Button>
       }
 
+{
+        !checkGitTypes() && 
+        <Button 
+          type="primary"
+          onClick={() => {
+            getStagedFiles();
+            setCommitModalVisible(true);
+          }}
+        >
+          Committing Staged Changes
+        </Button>
+
+      }
+
       <Table
         columns={columns}
         dataSource={fileList}
@@ -397,6 +480,30 @@ export default function FileTable( { path, onPathChange}: FileTableProps) {
             setNewName(e.target.value);
           }}
 
+        />
+      </Modal>
+
+      <Modal
+        title="Commit Staged Changes"
+        visible={commitModalVisible}
+        onOk={handleCommit}
+        onCancel={() => {
+          setCommitModalVisible(false);
+        }}
+        okText="Commit"
+      >
+        {stagedFiles.map((file) => (
+          <p key={file.key}>{file.name.fileName}</p>
+        ))}
+
+        <br />
+
+        <Input
+          placeholder="Enter commit message"
+          value={newName}
+          onChange={(e) => {
+            setNewName(e.target.value);
+          }}
         />
       </Modal>
     </>
