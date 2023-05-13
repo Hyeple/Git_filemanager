@@ -9,10 +9,12 @@ from urllib.parse import unquote
 from typing import List
 from pydantic import BaseModel
 from git import Repo, GitCommandError, InvalidGitRepositoryError
-import os
+import os 
+from typing import Optional
 import locale
 import datetime
 import logging
+import urllib.parse
 
 logging.basicConfig(level=logging.INFO)
 
@@ -72,7 +74,7 @@ async def get_files(path: str):
             is_git = False
 
         with os.scandir(directory) as entries:
-            entries = [entry for entry in entries if not entry.name.startswith(".") and not entry.name == "__pycache__" and not entry.name.startswith("$")]
+            entries = [entry for entry in entries]
             entries.sort(key=lambda entry: (not entry.is_dir(), entry.name))
 
             for key, entry in enumerate(entries):
@@ -113,7 +115,7 @@ async def get_files(path: str):
                     git_type = "NULL"
                     
                 else:
-                    git_type = "NULL"
+                    git_type = "back"
 
                 directory = os.path.abspath(os.path.join("/", path))
 
@@ -149,9 +151,11 @@ async def push_path(path: Path):
 @app.post("/api/pop_path")
 async def pop_path():
     if path_stack:
-        return {"path": path_stack.pop()}
+        path_stack.pop()
+        return {"path": path_stack[-1] if path_stack else None}
     else:
         return {"message": "No more paths in the stack"}
+
     
 @app.post("/api/reset_path_stack")
 async def reset_path_stack():
@@ -171,6 +175,28 @@ async def init_repo(path: str):
 
     return {"message": "Git repository initialized"}
 
+def is_git_repo(directory: str) -> bool:
+    git_dir = os.path.join(directory, ".git")
+    return os.path.exists(git_dir)
+
+def has_ancestor_git_repo(directory: str) -> bool:
+    current_dir = os.path.abspath(directory)
+    while current_dir != "/":  # 최상위 디렉토리에 도달할 때까지 반복
+        if is_git_repo(current_dir):
+            return True
+        current_dir = os.path.dirname(current_dir)
+    return False
+
+@app.get("/api/is_repo")
+def is_repo(directory: Optional[str] = ''):
+    if not directory:
+        return {"is_repo": False, "message": "No directory provided"}
+
+    # Check if the given directory or its ancestors are Git repositories
+    is_repo = has_ancestor_git_repo(directory)
+
+    return {"is_repo": is_repo}
+
 @app.get("/{path:path}", include_in_schema=False)
 async def catch_all(path: str):
     return FileResponse("frontend/build/index.html")
@@ -179,3 +205,4 @@ async def catch_all(path: str):
 @app.get("/")
 async def read_root():
     return FileResponse("frontend/build/index.html")
+

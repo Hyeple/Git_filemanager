@@ -23,7 +23,7 @@ const ActionWrapper = styled.div`
 
 //파일 타입 받아오기 (폴더인지, 파일인지, (이건 깃 레포가 아닐 때)      언트랙인지, 모디파이드인지, 스테이징인지 커밋된건지 (이건 깃 레포일 때))
 type FileType =  "folder" | "file";
-type GitType = "null" | "untracked" | "modified" | "staged" | "committed" | "tracked" | "back";
+type GitType = "null" | "untracked" | "modified" | "staged" | "committed" | "tracked";
 
 type NameType = {
   fileName: string;
@@ -49,8 +49,6 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
           return <FolderTwoTone twoToneColor="#1677ff" style={{ fontSize: 24 }} />;
         case "null" :
           return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
-        case "back" :
-          return <FolderOpenTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
         default:
           return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
       }
@@ -162,6 +160,10 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
       withCredentials: true
     });
   }, []);
+
+  useEffect(() => {
+    fetchApi(path);
+  }, [fetchApi, path]);
   
   async function handleFolderClick(path: string) {
     console.log("현재 클릭한 path: " + path);
@@ -183,26 +185,6 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
       console.error("Error handling folder click:", error);
     }
   }
-  
-  
-  const goBack = useCallback(async () => {
-    // Pop the last path from the backend
-    const response = await axios.post("/api/pop_path", {}, {
-      withCredentials: true
-    });
-    const data = response.data;
-  
-    if (data.path) {
-      // Fetch the files of the last path
-      await fetchApi(data.path);
-    } else {
-      console.log(data.message);
-    }
-  }, [fetchApi]);    
-  
-  useEffect(() => {
-    fetchApi(path);
-  }, [fetchApi, path]);
 
 
   const initializeGitRepo = async () => {
@@ -230,6 +212,21 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
     }
   };
 
+  const goBack = useCallback(async () => {
+    // Pop the last path from the backend
+    const response = await axios.post("/api/pop_path", {}, {
+      withCredentials: true
+    });
+    const data = response.data;
+  
+    if (data.path) {
+      // Fetch the files of the last path
+      await fetchApi(data.path);
+    } else {
+      console.log(data.message);
+    }
+  }, [fetchApi]); 
+
   const columns: ColumnsType<FileTableDataType> = [
     {
       title: "Name",
@@ -244,10 +241,8 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
 
         return (
           <NameWrapper onClick={() => {
-            if (value.fileName === "..") {
-              goBack();
-            } else if (type_file === "folder") {
-              const newPath = normalizePath(`${path}/${record.name.fileName}`);
+            if (type_file === "folder") {
+              const newPath = normalizePath(`${path}/${record.name.fileName}`);  // 두 번씩 호출되는 주소를 한번으로 줄임.
               onPathChange(newPath);
               handleFolderClick(newPath);
             }
@@ -350,9 +345,6 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
 
           case "tracked" :
             return "";
-
-          case "back" :
-            return "";
         }
       },
     },
@@ -361,6 +353,7 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
 
   return (
     <>
+      <Button onClick={ goBack }>Click Me!</Button>
       <Button 
         type="primary" 
         style={{ marginBottom: '1rem' }}
