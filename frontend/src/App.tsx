@@ -12,7 +12,7 @@ const queryClient = new QueryClient();
 
 export default function App() {
   //사이드바 create, change 화면 변경
-  const [type, setType] = useState<SiderType>("change");
+  const [type, setType] = useState<SiderType>("create");
 
   return (
     <ConfigProvider theme={THEME}>
@@ -20,7 +20,7 @@ export default function App() {
         <BaseLayout type={type}>
           <BrowserRouter>
             <Routes>
-              <Route path="/*" element={<IndexPage />} />
+            <Route path="/*" element={<IndexPage setType={setType} />} />
             </Routes>
           </BrowserRouter>
         </BaseLayout>

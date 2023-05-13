@@ -7,6 +7,7 @@ import { getFileSize } from "../../utils/number";
 import { useQuery } from "@tanstack/react-query";
 import path from "path";
 import axios from 'axios';
+import { SiderType } from "../common/Sider";
 
 const NameWrapper = styled.div`
   display: flex;
@@ -77,6 +78,7 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
 interface FileTableProps {
   path: string
   onPathChange: (newDir: string) => void;
+  setType: (type: SiderType) => void;
 }
 
 //api 요청으로 백엔드에서 file list 호출
@@ -107,7 +109,7 @@ async function fetchFiles(path: string) {
 }
 
 
-export default function FileTable( { path, onPathChange }: FileTableProps) {
+export default function FileTable( { path, onPathChange, setType }: FileTableProps) {
   const [tableHeight, setTableHeight] = useState<number>(0);
   const [fileList, setFileList] = useState<FileTableDataType[]>([]);
 
@@ -161,6 +163,30 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     });
   }, []);
   
+  async function handleFolderClick(path: string) {
+    console.log("현재 클릭한 path: " + path);
+    try {
+      const response = await axios.get(`/api/is_repo?directory=${encodeURIComponent(path)}`, {
+        withCredentials: true,
+      });
+  
+      if (response.status !== 200 && response.status !== 304) {
+        console.error(`API request failed with status ${response.status}`);
+        return;
+      }
+  
+      const responseData = response.data;
+      const isRepo = responseData.is_repo;
+      console.log("isRepo: " + isRepo);
+      setType(isRepo ? "change" : "create");
+    } catch (error) {
+      console.error("Error handling folder click:", error);
+    }
+  }
+  
+  
+  
+  
   const goBack = useCallback(async () => {
     // Pop the last path from the backend
     const response = await axios.post("/api/pop_path", {}, {
@@ -198,8 +224,9 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
             if (value.fileName === "..") {
               goBack();
             } else if (type_file === "folder") {
-              const newPath = normalizePath(`${path}/${record.name.fileName}`); // 두 번씩 호출되는 주소를 한번으로 줄임.
+              const newPath = normalizePath(`${path}/${record.name.fileName}`);
               onPathChange(newPath);
+              handleFolderClick(newPath);
             }
           }}>
             {getFileIcon(type_file, type_git)}
