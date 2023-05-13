@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Modal, Button, Table, Tooltip } from "antd";
+import { Modal, Button, Table, Tooltip, Input } from "antd";
 import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
@@ -111,6 +111,16 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   const [tableHeight, setTableHeight] = useState<number>(0);
   const [fileList, setFileList] = useState<FileTableDataType[]>([]);
 
+  const [isRenameModalVisible, setRenameModalVisible] = useState<boolean>(false);
+  const [fileToRename, setFileToRename] = useState<NameType | null>(null);
+  const [newName, setNewName] = useState<string>("");
+
+  const handleRenameClick = (record: FileTableDataType) => {
+    setFileToRename(record.name);
+    setRenameModalVisible(true);
+  };
+
+
   const updateTableHeight = () => {
     const windowHeight = window.innerHeight;
     const desiredTableHeight = windowHeight - 300;
@@ -219,7 +229,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       title: "Git Action",
       dataIndex: "action",
       key: "action",
-      render: (value: GitType) => {
+      render: (value: GitType, record : FileTableDataType) => {
         if (!value) {
           return "";
         }
@@ -278,7 +288,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
                 </Tooltip>
                 
                 <Tooltip title="Renaming file">
-                  <Button icon = {<EditOutlined />} >
+                  <Button icon={<EditOutlined />} onClick={() => handleRenameClick(record)}>
                     Rename
                   </Button>
                 </Tooltip>
@@ -300,11 +310,47 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
 
   return (
-    <Table
-      columns={columns}
-      dataSource={fileList}
-      pagination={false}
-      scroll={{ y: tableHeight }}
-    />
+    <>
+      <Table
+        columns={columns}
+        dataSource={fileList}
+        pagination={false}
+        scroll={{ y: tableHeight }}
+      />
+
+      <Modal
+        title="Rename File"
+        visible={isRenameModalVisible}
+        onOk={async () => {
+          // 백 실제 api랑 연결해야함.
+          const newName = "newName"; // Get this value from your form.
+          await axios.post(`/api/rename_file`, { 
+            oldName: fileToRename?.fileName, 
+            newName
+          });
+
+          // Fetch the file list again to update the UI.
+          await fetchApi(path);
+
+          // Close the modal.
+          setRenameModalVisible(false);
+          setFileToRename(null);
+          setNewName(""); // Reset newName state
+        }}
+        onCancel={() => {
+          setRenameModalVisible(false);
+          setNewName(""); // Reset newName state
+        }}
+      >
+        <Input
+          placeholder="Enter new file name"
+          value={newName}
+          onChange={e => {
+            setNewName(e.target.value);
+          }}
+
+        />
+      </Modal>
+    </>
   );
 }
