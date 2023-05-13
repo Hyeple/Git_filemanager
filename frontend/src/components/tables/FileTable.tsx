@@ -7,7 +7,6 @@ import { getFileSize } from "../../utils/number";
 import { useQuery } from "@tanstack/react-query";
 import path from "path";
 import axios from 'axios';
-import { SiderType } from "../common/Sider";
 
 const NameWrapper = styled.div`
   display: flex;
@@ -23,7 +22,7 @@ const ActionWrapper = styled.div`
 
 //파일 타입 받아오기 (폴더인지, 파일인지, (이건 깃 레포가 아닐 때)      언트랙인지, 모디파이드인지, 스테이징인지 커밋된건지 (이건 깃 레포일 때))
 type FileType =  "folder" | "file";
-type GitType = "null" | "untracked" | "modified" | "staged" | "committed" | "tracked";
+type GitType = "null" | "untracked" | "modified" | "staged" | "committed" | "tracked" | "back";
 
 type NameType = {
   fileName: string;
@@ -49,6 +48,8 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
           return <FolderTwoTone twoToneColor="#1677ff" style={{ fontSize: 24 }} />;
         case "null" :
           return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
+        case "back" :
+          return <FolderOpenTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
         default:
           return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
       }
@@ -76,7 +77,6 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
 interface FileTableProps {
   path: string
   onPathChange: (newDir: string) => void;
-  setType: (type: SiderType) => void;
 }
 
 //api 요청으로 백엔드에서 file list 호출
@@ -107,7 +107,7 @@ async function fetchFiles(path: string) {
 }
 
 
-export default function FileTable( { path, onPathChange, setType }: FileTableProps) {
+export default function FileTable( { path, onPathChange}: FileTableProps) {
   const [tableHeight, setTableHeight] = useState<number>(0);
   const [fileList, setFileList] = useState<FileTableDataType[]>([]);
 
@@ -136,9 +136,10 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
     };
   }, []);
 
+  //파일 리스트 불러오기
   const fetchApi = useCallback(async (path: string) => {
     const data = await fetchFiles(path);
-    console.log("FileTable.tsx 부분 path: " + path);
+    console.log("path: " + path);
     const files = data.map((item: any) => ({
       key: item.key,
       name: {
@@ -165,56 +166,11 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
   useEffect(() => {
     fetchApi(path);
   }, [fetchApi, path]);
-  
-  async function handleFolderClick(path: string) {
-    try {
-      const response = await axios.get(`/api/is_repo?directory=${encodeURIComponent(path)}`, {
-        withCredentials: true,
-      });
-  
-      if (response.status !== 200 && response.status !== 304) {
-        console.error(`API request failed with status ${response.status}`);
-        return;
-      }
-  
-      const responseData = response.data;
-      const isRepo = responseData.is_repo;
-      console.log("isRepo: " + isRepo);
-      setType(isRepo ? "change" : "create");
-    } catch (error) {
-      console.error("Error handling folder click:", error);
-    }
-  }
-
-
-  const initializeGitRepo = async () => {
-    try {
-      const response = await axios.post("/api/init_repo", { path }, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        withCredentials: true
-      });
-  
-      if (response.status !== 200) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
-  
-      const responseData = response.data;
-  
-      // Optionally, show a success message
-      message.success(responseData.message);
-    } catch (error) {
-      console.log(path)
-      console.error("Error initializing git repo:", error);
-      // Optionally, show an error message
-      message.error("Error initializing git repository");
-    }
-  };
 
   const [pathStack, setPathStack] = useState<string[]>([path]);
 
 
+  //돌아가기
   const goBack = useCallback(() => {
     if (pathStack.length > 0) {
       const newPathStack = [...pathStack];
@@ -225,6 +181,36 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
       console.log("No more paths in the stack");
     }
   }, [onPathChange, pathStack]);
+  
+  //
+  const checkGitTypes = useCallback(() => {
+    return fileList.every((file) => file.name.type_git === 'null');
+  }, [fileList]);
+  
+  //
+  const initRepo = async () => {
+    try {
+      const response = await axios.post("/init_repo", { path: path }, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
+
+      if (response.data.message === "Git repository initialized") {
+        message.success(response.data.message);
+        fetchApi(path); // fetch the fileList again to update the UI
+      } else {
+        message.error(response.data.error);
+      }
+    } catch (error) {
+      console.log("시발  " + path);
+      console.error("Error initializing repository:", error);
+      message.error("An error occurred while initializing the repository");
+    }
+  };
+  
+  
   
 
   const columns: ColumnsType<FileTableDataType> = [
@@ -242,6 +228,8 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
         return (
           <NameWrapper onClick={() => {
             if (value.fileName === "..") {
+              const newPath = path;
+              console.log(path);
               goBack();
             } else if (type_file === "folder") {
               const newPath = normalizePath(`${path}/${record.name.fileName}`);
@@ -348,6 +336,9 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
           case "null" :
             return "";
 
+          case "back" :
+            return "";
+
           case "tracked" :
             return "";
         }
@@ -358,15 +349,15 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
 
   return (
     <>
-      <Button onClick={ goBack }>Click Me!</Button>
-      <Button 
-        type="primary" 
-        style={{ marginBottom: '1rem' }}
-        onClick={initializeGitRepo}
-        >Initialize Git Repository
-        
-      </Button>
-
+      {
+        checkGitTypes() && 
+        <Button 
+          type="primary"
+          onClick={initRepo}
+        >
+          Create Git Repo
+        </Button>
+      }
 
       <Table
         columns={columns}

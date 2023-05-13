@@ -3,13 +3,11 @@ import ContentLayout from "../layouts/ContentLayout";
 import { Button } from "antd";
 import { HomeOutlined } from "@ant-design/icons";
 import FileTable from "../components/tables/FileTable";
-import { SiderType } from "../components/common/Sider";
 
 interface IndexPageProps {
-  setType: React.Dispatch<React.SetStateAction<SiderType>>;
 }
 
-export default function IndexPage({ setType }: IndexPageProps) {
+export default function IndexPage({}: IndexPageProps) {
   const [path, setPath] = useState("C:/");
 
   const handlePathChange = (newDir: string) => {
@@ -19,7 +17,7 @@ export default function IndexPage({ setType }: IndexPageProps) {
 
   return (
     <ContentLayout>
-      <FileTable path={path} onPathChange={handlePathChange} setType={setType} />
+      <FileTable path={path} onPathChange={handlePathChange} />
     </ContentLayout>
   );
 }
