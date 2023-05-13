@@ -9,6 +9,7 @@ from urllib.parse import unquote
 from typing import List
 from pydantic import BaseModel
 from git import Repo, GitCommandError, InvalidGitRepositoryError
+from collections import deque
 import os 
 from typing import Optional
 import locale
@@ -141,7 +142,7 @@ async def get_files(path: str):
         logging.error(f"Error occurred: {str(e)}")  # 로깅 레벨을 error로 설정
         raise HTTPException(status_code=500, detail=str(e))
     
-path_stack = [] # path 를 저장하는 stack
+path_stack = deque() # path 를 저장하는 stack
 
 class Path(BaseModel):
     path: str
@@ -162,7 +163,6 @@ async def pop_path():
         return {"message": "No more paths in the stack"}
 
 
-    
 @app.post("/api/reset_path_stack")
 async def reset_path_stack():
     path_stack.clear()  # 새로 고침하면 path_stack 초기화
@@ -203,6 +203,78 @@ def is_repo(directory: Optional[str] = ''):
 
     return {"is_repo": is_repo}
 
+@app.post("/api/git_add")
+async def git_add(path: str, file_path: str):
+    # Check if the path is a valid directory
+    if not os.path.exists(path) or not os.path.isdir(path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+
+    # Try to add the file
+    try:
+        repo.git.add(file_path)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "File added successfully"}
+
+
+class CommitItem(BaseModel):
+    path: str
+    message: str
+
+@app.post("/api/commit") # 스테이징된 파일이라면 커밋이 가능하다!
+async def commit(item: CommitItem):
+    # Check if the path is a valid directory
+    if not os.path.exists(item.path) or not os.path.isdir(item.path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(item.path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+
+    # Check if there are any staged files
+    diff_index = repo.index.diff(None)
+    if len(diff_index) == 0:
+        raise HTTPException(status_code=400, detail="No files staged for commit")
+
+    # Try to commit
+    try:
+        repo.index.commit(item.message)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "Commit successful"}
+
+class RestoreItem(BaseModel):
+    path: str
+    file_path: str
+
+
+@app.post("/api/git_restore")
+async def git_restore(item: RestoreItem):
+    # Check if the path is a valid directory
+    if not os.path.exists(item.path) or not os.path.isdir(item.path):
+        raise HTTPException(status_code=404, detail="Directory is not found.")
+    
+    try:
+        repo = Repo(item.path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The Directory is not a repository.")
+    
+    try:
+        repo.git.restore(item.file_path)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return {"message" : "File restored successfully."}
+
+
 @app.get("/{path:path}", include_in_schema=False)
 async def catch_all(path: str):
     return FileResponse("frontend/build/index.html")
@@ -211,4 +283,3 @@ async def catch_all(path: str):
 @app.get("/")
 async def read_root():
     return FileResponse("frontend/build/index.html")
-
