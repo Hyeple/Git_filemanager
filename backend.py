@@ -156,17 +156,6 @@ async def push_path(path: Path):
     return {"message": "Path pushed successfully"}
 
 
-# pop path_stack
-@app.post("/api/pop_path")
-async def pop_path():
-    if path_stack:
-        path_stack.pop()
-        path_stack.pop()
-        return {"path": path_stack[-1] if path_stack else None}
-    else:
-        return {"message": "No more paths in the stack"}
-
-
 # path_reset
 @app.post("/api/reset_path_stack")
 async def reset_path_stack():
@@ -176,18 +165,20 @@ async def reset_path_stack():
 
 # git_init
 @app.post("/init_repo")
-async def init_repo(path: str):
-    directory = os.path.abspath(os.path.join("/", path))
-    if not os.path.exists(directory) or not os.path.isdir(directory):
-        return JSONResponse(content={"error": "Invalid path"}, status_code=404)
+async def init_repo(path: Path):
+    logging.info(f"INIT_PATH: {path}")
+    # Check if the repo_path is a valid directory
+    if not os.path.exists(path) or not os.path.isdir(path):
+        logging.error(f"INIT_PATH: {path}")
+        raise HTTPException (status_code=404, detail="Directory not found")
 
     try:
-        Repo.init(directory)
-    except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        # Initialize the directory as a git repository
+        Repo.init(path)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    return {"message": "Git repository initialized"}
-
+    return {"message": "Repository initialized successfully"}
 
 # git_add
 class AddItem(BaseModel):

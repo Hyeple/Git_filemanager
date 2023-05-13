@@ -76,7 +76,7 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
 //실제 돌아갈 코드 부분
 interface FileTableProps {
   path: string
-  onPathChange: (newDir: string) => void;
+  onPathChange: (newDir: string) => string;
 }
 
 //api 요청으로 백엔드에서 file list 호출
@@ -107,7 +107,7 @@ async function fetchFiles(path: string) {
 }
 
 
-export default function FileTable( { path, onPathChange}: FileTableProps) {
+export default function FileTable( { path, onPathChange }: FileTableProps) {
   const [tableHeight, setTableHeight] = useState<number>(0);
   const [fileList, setFileList] = useState<FileTableDataType[]>([]);
 
@@ -187,10 +187,16 @@ export default function FileTable( { path, onPathChange}: FileTableProps) {
     return fileList.every((file) => file.name.type_git === 'null');
   }, [fileList]);
   
-  //
+  // git_init
   const initRepo = async () => {
+    const newPathStack = [...pathStack];
+    setPathStack(newPathStack);
+    const newPath = onPathChange(newPathStack[newPathStack.length - 1]);
+    console.log("시시발  " + newPath);
+
     try {
-      const response = await axios.post("/init_repo", { path: path }, {
+      path = newPath;
+      const response = await axios.post("/init_repo", { path: newPath }, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -199,6 +205,7 @@ export default function FileTable( { path, onPathChange}: FileTableProps) {
 
       if (response.data.message === "Git repository initialized") {
         message.success(response.data.message);
+        console.log("Success!")
         fetchApi(path); // fetch the fileList again to update the UI
       } else {
         message.error(response.data.error);
@@ -209,8 +216,6 @@ export default function FileTable( { path, onPathChange}: FileTableProps) {
       message.error("An error occurred while initializing the repository");
     }
   };
-  
-  
   
 
   const columns: ColumnsType<FileTableDataType> = [
@@ -229,7 +234,7 @@ export default function FileTable( { path, onPathChange}: FileTableProps) {
           <NameWrapper onClick={() => {
             if (value.fileName === "..") {
               const newPath = path;
-              console.log(path);
+              console.log(newPath);
               goBack();
             } else if (type_file === "folder") {
               const newPath = normalizePath(`${path}/${record.name.fileName}`);
