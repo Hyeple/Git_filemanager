@@ -9,13 +9,15 @@ from urllib.parse import unquote
 from typing import List
 from pydantic import BaseModel
 from git import Repo, GitCommandError, InvalidGitRepositoryError
-from collections import deque
 import os 
 from typing import Optional
 import locale
 import datetime
 import logging
 import urllib.parse
+from collections import deque
+
+path_stack = deque()
 
 logging.basicConfig(level=logging.INFO)
 
@@ -53,14 +55,14 @@ async def get_files(path: str):
     path = os.path.normpath(path)
 
     # Log the normalized path
-    logging.info(f"Normalized path: {path}")
+    #logging.info(f"Normalized path: {path}")
 
     try:
-        logging.info(f"Received path: {path}")
+        #logging.info(f"Received path: {path}")
         directory = os.path.abspath(os.path.join("/", path))
 
         # Log the absolute directory path
-        logging.info(f"Absolute directory path: {directory}")
+        #logging.info(f"Absolute directory path: {directory}")
 
         if not os.path.exists(directory):
             raise HTTPException(status_code=404, detail="Directory not found")
@@ -69,7 +71,7 @@ async def get_files(path: str):
         files = []
 
         # Add a special folder item for going back
-        go_back_item = FileItem(key=-1, name="..", file_type="folder", git_type="NULL", size=0, last_modified="")
+        go_back_item = FileItem(key=-1, name="..", file_type="folder", git_type="null", size=0, last_modified="")
         folders.append(go_back_item)
 
         try:
@@ -92,7 +94,7 @@ async def get_files(path: str):
                         diff_staged = repo.index.diff("HEAD")
                         full_path = os.path.relpath(entry.path, repo.working_tree_dir).replace("\\", "/")
 
-                        logging.info("{full_path}")
+                        #logging.info("{full_path}")
 
                         if full_path in [d.a_path for d in diff_staged]:
                             git_type = "staged"
@@ -114,13 +116,13 @@ async def get_files(path: str):
 
 
                 elif is_git == False and file_type == "folder":
-                    git_type = "NULL"
+                    git_type = "null"
 
                 elif is_git == False and file_type == "file" :
-                    git_type = "NULL"
+                    git_type = "null"
                     
                 else:
-                    git_type = "back"
+                    git_type = "null"
 
                 directory = os.path.abspath(os.path.join("/", path))
 
@@ -141,8 +143,6 @@ async def get_files(path: str):
     except Exception as e:
         logging.error(f"Error occurred: {str(e)}")  # 로깅 레벨을 error로 설정
         raise HTTPException(status_code=500, detail=str(e))
-    
-path_stack = deque() # path 를 저장하는 stack
 
 class Path(BaseModel):
     path: str
@@ -163,6 +163,7 @@ async def pop_path():
         return {"message": "No more paths in the stack"}
 
 
+    
 @app.post("/api/reset_path_stack")
 async def reset_path_stack():
     path_stack.clear()  # 새로 고침하면 path_stack 초기화
@@ -273,7 +274,6 @@ async def git_restore(item: RestoreItem):
         raise HTTPException(status_code=500, detail=str(e))
     
     return {"message" : "File restored successfully."}
-
 
 @app.get("/{path:path}", include_in_schema=False)
 async def catch_all(path: str):
