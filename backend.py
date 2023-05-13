@@ -67,6 +67,10 @@ async def get_files(path: str):
         folders = []
         files = []
 
+        # Add a special folder item for going back
+        go_back_item = FileItem(key=-1, name="..", file_type="folder", git_type="NULL", size=0, last_modified="")
+        folders.append(go_back_item)
+
         try:
             repo = Repo(directory, search_parent_directories=True)
             is_git = True
@@ -152,9 +156,11 @@ async def push_path(path: Path):
 async def pop_path():
     if path_stack:
         path_stack.pop()
+        path_stack.pop()
         return {"path": path_stack[-1] if path_stack else None}
     else:
         return {"message": "No more paths in the stack"}
+
 
     
 @app.post("/api/reset_path_stack")

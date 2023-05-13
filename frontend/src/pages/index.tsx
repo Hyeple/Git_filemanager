@@ -10,7 +10,7 @@ interface IndexPageProps {
 }
 
 export default function IndexPage({ setType }: IndexPageProps) {
-  const [path, setPath] = useState("C:\\");
+  const [path, setPath] = useState("C:/");
 
   const handlePathChange = (newDir: string) => {
     const updatedPath = new URL(newDir, "file:///" + path).pathname.substring(1);

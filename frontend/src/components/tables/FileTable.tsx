@@ -138,6 +138,7 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
 
   const fetchApi = useCallback(async (path: string) => {
     const data = await fetchFiles(path);
+    console.log("FileTable.tsx 부분 path: " + path);
     const files = data.map((item: any) => ({
       key: item.key,
       name: {
@@ -166,7 +167,6 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
   }, [fetchApi, path]);
   
   async function handleFolderClick(path: string) {
-    console.log("현재 클릭한 path: " + path);
     try {
       const response = await axios.get(`/api/is_repo?directory=${encodeURIComponent(path)}`, {
         withCredentials: true,
@@ -212,20 +212,20 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
     }
   };
 
-  const goBack = useCallback(async () => {
-    // Pop the last path from the backend
-    const response = await axios.post("/api/pop_path", {}, {
-      withCredentials: true
-    });
-    const data = response.data;
-  
-    if (data.path) {
-      // Fetch the files of the last path
-      await fetchApi(data.path);
+  const [pathStack, setPathStack] = useState<string[]>([path]);
+
+
+  const goBack = useCallback(() => {
+    if (pathStack.length > 0) {
+      const newPathStack = [...pathStack];
+      newPathStack.pop();
+      setPathStack(newPathStack);
+      onPathChange(newPathStack[newPathStack.length - 1] || "");
     } else {
-      console.log(data.message);
+      console.log("No more paths in the stack");
     }
-  }, [fetchApi]); 
+  }, [onPathChange, pathStack]);
+  
 
   const columns: ColumnsType<FileTableDataType> = [
     {
@@ -241,10 +241,15 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
 
         return (
           <NameWrapper onClick={() => {
-            if (type_file === "folder") {
-              const newPath = normalizePath(`${path}/${record.name.fileName}`);  // 두 번씩 호출되는 주소를 한번으로 줄임.
-              onPathChange(newPath);
-              handleFolderClick(newPath);
+            if (value.fileName === "..") {
+              goBack();
+            } else if (type_file === "folder") {
+              const newPath = normalizePath(`${path}/${record.name.fileName}`);
+              if (!pathStack.includes(newPath)) {
+                const newPathStack = [...pathStack, newPath];
+                setPathStack(newPathStack);
+                onPathChange(newPath);
+              }
             }
           }}>
             {getFileIcon(type_file, type_git)}
