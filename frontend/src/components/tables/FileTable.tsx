@@ -4,7 +4,6 @@ import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoT
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
-import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import path from "path";
 import axios from 'axios';
@@ -23,7 +22,7 @@ const ActionWrapper = styled.div`
 
 //파일 타입 받아오기 (폴더인지, 파일인지, (이건 깃 레포가 아닐 때)      언트랙인지, 모디파이드인지, 스테이징인지 커밋된건지 (이건 깃 레포일 때))
 type FileType =  "folder" | "file";
-type GitType = "null" | "untracked" | "modified" | "staged" | "committed";
+type GitType = "null" | "untracked" | "modified" | "staged" | "committed" | "tracked";
 
 type NameType = {
   fileName: string;
@@ -43,13 +42,7 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
   switch (type1) {
     case "folder":
       switch (type2) {
-        case "untracked":
-          return <FolderTwoTone twoToneColor="#1677ff" style={{ fontSize: 24 }} />;
-        case "modified":
-          return <FolderTwoTone twoToneColor="#ff4d4f" style={{ fontSize: 24 }} />;
-        case "staged":
-          return <FolderTwoTone twoToneColor="#f7f008" style={{ fontSize: 24 }} />;
-        case "committed":
+        case "tracked":
           return <FolderTwoTone twoToneColor="#96F2D7" style={{ fontSize: 24 }} />;
         case "null" :
           return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
@@ -288,6 +281,9 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
           case "null" :
             return "";
+
+          case "tracked" :
+            return "";
         }
       },
     },
@@ -300,8 +296,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       dataSource={fileList}
       pagination={false}
       scroll={{ y: tableHeight }}
-  
-  
     />
   );
 }

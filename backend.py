@@ -56,7 +56,6 @@ async def get_files(path: str):
         logging.info(f"Received path: {path}")
         directory = os.path.abspath(os.path.join("/", path))
 
-        
         # Log the absolute directory path
         logging.info(f"Absolute directory path: {directory}")
 
@@ -79,21 +78,38 @@ async def get_files(path: str):
             for key, entry in enumerate(entries):
                 file_type = "folder" if entry.is_dir() else "file"
                 
-                # Git_Type 인식 (코드 병합 부분) git_folder
-                if is_git == True:
-                    if file_type == "folder" or "file":
+            # Git_Type 인식 (코드 병합 부분) git_folder
+                if is_git == True :
+                    if file_type == "file" : 
                         diff_index = repo.index.diff(None)
                         diff_staged = repo.index.diff("HEAD")
-                        if entry.name in [d.a_path for d in diff_staged]:
+                        full_path = os.path.relpath(entry.path, repo.working_tree_dir).replace("\\", "/")
+
+                        logging.info("{full_path}")
+
+                        if full_path in [d.a_path for d in diff_staged]:
                             git_type = "staged"
-                        elif entry.name in [d.a_path for d in diff_index]:
+                        elif full_path in [d.a_path for d in diff_index]:
                             git_type = "modified"
-                        elif entry.name in repo.untracked_files:
+                        elif full_path in repo.untracked_files:
                             git_type = "untracked"
                         else:
                             git_type = "committed"
+
+                    if file_type == "folder":
+                        if entry.name in repo.untracked_files:
+                            git_type = "untracked"
+                        else : 
+                            git_type = "tracked"
+
+
+                elif is_git == False and file_type == "folder":
+                    git_type = "NULL"
                 else:
                     git_type = "NULL"
+
+                directory = os.path.abspath(os.path.join("/", path))
+
 
                 file_size = entry.stat().st_size
                 last_modified = datetime.datetime.fromtimestamp(
