@@ -4,8 +4,9 @@ import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoT
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
-import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import path from "path";
+import axios from 'axios';
 
 const NameWrapper = styled.div`
   display: flex;
@@ -21,7 +22,7 @@ const ActionWrapper = styled.div`
 
 //파일 타입 받아오기 (폴더인지, 파일인지, (이건 깃 레포가 아닐 때)      언트랙인지, 모디파이드인지, 스테이징인지 커밋된건지 (이건 깃 레포일 때))
 type FileType =  "folder" | "file";
-type GitType = "untracked" | "modified" | "staged" | "committed";
+type GitType = "null" | "untracked" | "modified" | "staged" | "committed" | "tracked";
 
 type NameType = {
   fileName: string;
@@ -34,7 +35,7 @@ interface FileTableDataType {
   name: NameType;
   size: number;
   lastModified: string;
-  action?: FileType;
+  action?: GitType;
 }
 
 const getFileIcon = (type1: FileType, type2?: GitType) => {
@@ -43,12 +44,10 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
       switch (type2) {
         case "untracked":
           return <FolderTwoTone twoToneColor="#1677ff" style={{ fontSize: 24 }} />;
-        case "modified":
-          return <FolderTwoTone twoToneColor="#ff4d4f" style={{ fontSize: 24 }} />;
-        case "staged":
-          return <FolderTwoTone twoToneColor="#f7f008" style={{ fontSize: 24 }} />;
-        case "committed":
+        case "tracked":
           return <FolderTwoTone twoToneColor="#96F2D7" style={{ fontSize: 24 }} />;
+        case "null" :
+          return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
         default:
           return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
       }
@@ -63,6 +62,8 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
           return <FileTextTwoTone twoToneColor="#f7f008" style={{ fontSize: 24 }} />;
         case "committed":
           return <FileTextTwoTone twoToneColor="#96F2D7" style={{ fontSize: 24 }} />;
+        case "null" :
+          return <FileTextTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
         default:
           return <FileTextTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
       }
@@ -70,22 +71,25 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
 };
 
 
-
 //실제 돌아갈 코드 부분
-
-interface FileTableProps {}
+interface FileTableProps {
+  path: string
+  onPathChange: (newDir: string) => void;
+}
 
 //api 요청으로 백엔드에서 file list 호출
 async function fetchFiles(path: string) {
   try {
     const encodedPath = encodeURIComponent(path);
-    const response = await fetch(`/api/root_files?path=${encodedPath}`);
+    const response = await axios.get(`/api/root_files?path=${encodedPath}`, {
+      withCredentials: true,
+    });
 
-    if (!response.ok && response.status !== 304) {
+    if (response.status !== 200 && response.status !== 304) {
       throw new Error(`API request failed with status ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = response.data;
 
     if (!Array.isArray(data)) {
       throw new Error("Data is not an array");
@@ -101,8 +105,7 @@ async function fetchFiles(path: string) {
 }
 
 
-export default function FileTable(props: FileTableProps) {
-  const { pathname } = useLocation();
+export default function FileTable( { path, onPathChange }: FileTableProps) {
   const [tableHeight, setTableHeight] = useState<number>(0);
   const [fileList, setFileList] = useState<FileTableDataType[]>([]);
 
@@ -121,26 +124,50 @@ export default function FileTable(props: FileTableProps) {
     };
   }, []);
 
-  const fetchApi = useCallback(async (path = "C://") => {
+  const fetchApi = useCallback(async (path: string) => {
     const data = await fetchFiles(path);
     const files = data.map((item: any) => ({
       key: item.key,
       name: {
         fileName: item.name,
-        //이 부분 수정해야합니다.
-        type_file: item.type,
-        type_git: item.type,
+        type_file: item.file_type,
+        type_git: item.git_type,
       },
       size: item.size,
       lastModified: item.last_modified,
+      action: item.git_type
     }));
   
     setFileList(files as FileTableDataType[]);
-  }, [pathname]);     
-
+  
+  // Push the current path to the backend
+    await axios.post("/api/push_path", { path }, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      withCredentials: true
+    });
+  }, []);
+  
+  const goBack = useCallback(async () => {
+    // Pop the last path from the backend
+    const response = await axios.post("/api/pop_path", {}, {
+      withCredentials: true
+    });
+    const data = response.data;
+  
+    if (data.path) {
+      // Fetch the files of the last path
+      await fetchApi(data.path);
+    } else {
+      console.log(data.message);
+    }
+  }, [fetchApi]);    
+  
   useEffect(() => {
-    fetchApi();
-  }, [fetchApi]);
+    fetchApi(path);
+  }, [fetchApi, path]);
+  
 
   const columns: ColumnsType<FileTableDataType> = [
     {
@@ -151,11 +178,16 @@ export default function FileTable(props: FileTableProps) {
         if (!value) {
           return "";
         }
-  
         const { fileName, type_file, type_git } = value;
-  
+        const normalizePath = (parts: string) => parts.replace(/\/+/g, '/');
+
         return (
-          <NameWrapper onClick={() => type_file === "folder" && fetchApi(record.name.fileName)}>
+          <NameWrapper onClick={() => {
+            if (type_file === "folder") {
+              const newPath = normalizePath(`${path}/${record.name.fileName}`); // 두 번씩 호출되는 주소를 한번으로 줄임.
+              onPathChange(newPath);
+            }
+          }}>
             {getFileIcon(type_file, type_git)}
             {fileName}
           </NameWrapper>
@@ -248,6 +280,12 @@ export default function FileTable(props: FileTableProps) {
                 </Tooltip>
               </ActionWrapper>
             );
+
+          case "null" :
+            return "";
+
+          case "tracked" :
+            return "";
         }
       },
     },
@@ -263,66 +301,3 @@ export default function FileTable(props: FileTableProps) {
     />
   );
 }
-
-
-
-
-
-/*
-//프론트 테스트용 mock
-const data: FileTableDataType[] = [
-  {
-    key: "1",
-    name: {
-      fileName: "test",
-      type_file: "folder",
-      type_git: "untracked",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-    action: "untracked",
-  },
-  {
-    key: "2",
-    name: {
-      fileName: "test.js",
-      type_file: "file",
-      type_git: "modified",
-    },
-    size: 325,
-    lastModified: "2023-05-05",
-    action: "modified",
-  },
-];
-
-interface FileTableProps {}
-
-export default function FileTable(props: FileTableProps) {
-  const { pathname } = useLocation();
-  const [tableHeight, setTableHeight] = useState<number>(0);
-
-  const updateTableHeight = () => {
-    const windowHeight = window.innerHeight;
-    const desiredTableHeight = windowHeight - 300; // You can adjust this value to change the margin
-    setTableHeight(desiredTableHeight);
-  };
-
-  useEffect(() => {
-    updateTableHeight();
-    window.addEventListener("resize", updateTableHeight);
-
-    return () => {
-      window.removeEventListener("resize", updateTableHeight);
-    };
-  }, []);
-
-  return (
-    <Table
-      columns={columns}
-      dataSource={data}
-      pagination={false}
-      scroll={{ y: tableHeight }} // Use the tableHeight state here
-    />
-  );
-}
-*/
