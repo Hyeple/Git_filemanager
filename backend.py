@@ -163,10 +163,6 @@ async def reset_path_stack():
     return {"message": "Path stack reset successfully"}
 
 
-
-
-
-
 # git_init
 @app.post("/init_repo")
 async def init_repo(path: Path):
@@ -183,10 +179,6 @@ async def init_repo(path: Path):
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "Repository initialized successfully"}
-
-
-
-
 
 # git_add
 class AddItem(BaseModel):

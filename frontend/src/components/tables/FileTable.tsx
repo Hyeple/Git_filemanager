@@ -107,7 +107,7 @@ async function fetchFiles(path: string) {
 }
 
 
-export default function FileTable( { path, onPathChange}: FileTableProps) {
+export default function FileTable( { path, onPathChange }: FileTableProps) {
   const [tableHeight, setTableHeight] = useState<number>(0);
   const [fileList, setFileList] = useState<FileTableDataType[]>([]);
 
@@ -298,7 +298,7 @@ const handleCommit = async () => {
           <NameWrapper onClick={() => {
             if (value.fileName === "..") {
               const newPath = path;
-              console.log(path);
+              console.log(newPath);
               goBack();
             } else if (type_file === "folder") {
               const newPath = normalizePath(`${path}/${record.name.fileName}`);
