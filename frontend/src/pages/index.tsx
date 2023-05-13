@@ -18,13 +18,7 @@ export default function IndexPage({ setType }: IndexPageProps) {
   };
 
   return (
-    <ContentLayout
-      options={[
-        <Button>
-          <HomeOutlined />
-        </Button>,
-      ]}
-    >
+    <ContentLayout>
       <FileTable path={path} onPathChange={handlePathChange} setType={setType} />
     </ContentLayout>
   );

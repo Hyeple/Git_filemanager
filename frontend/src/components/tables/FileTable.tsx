@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Modal, Button, Table, Tooltip, Input } from "antd";
+import { Modal, Button, Table, Tooltip, Input, message } from "antd";
 import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
@@ -185,8 +185,6 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
   }
   
   
-  
-  
   const goBack = useCallback(async () => {
     // Pop the last path from the backend
     const response = await axios.post("/api/pop_path", {}, {
@@ -205,7 +203,32 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
   useEffect(() => {
     fetchApi(path);
   }, [fetchApi, path]);
+
+
+  const initializeGitRepo = async () => {
+    try {
+      const response = await axios.post("/api/init_repo", { path }, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true
+      });
   
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+  
+      const responseData = response.data;
+  
+      // Optionally, show a success message
+      message.success(responseData.message);
+    } catch (error) {
+      console.log(path)
+      console.error("Error initializing git repo:", error);
+      // Optionally, show an error message
+      message.error("Error initializing git repository");
+    }
+  };
 
   const columns: ColumnsType<FileTableDataType> = [
     {
@@ -338,6 +361,15 @@ export default function FileTable( { path, onPathChange, setType }: FileTablePro
 
   return (
     <>
+      <Button 
+        type="primary" 
+        style={{ marginBottom: '1rem' }}
+        onClick={initializeGitRepo}
+        >Initialize Git Repository
+        
+      </Button>
+
+
       <Table
         columns={columns}
         dataSource={fileList}
