@@ -31,7 +31,7 @@ You need to modify 'nginx.conf' to match the setting of nginx to 'default.conf'.
 
 First, find the location of nginx.conf. It is usually located in the conf folder of the installation file.
 ```
-https://user-images.githubusercontent.com/102994654/238167863-4c23e278-e5a7-48bc-bc2a-9dc7902c50f6.png
+![nginx_conf](https://github.com/Hyeple/Git_filemanager/assets/102994654/a7f3fb34-1251-4493-9cf5-02393a7894fd)
 
 ```bash
 Second, you need to modify the 'include' statement in the HTTP paragraph. Adds a 'path' to refer to the location of default.conf.
