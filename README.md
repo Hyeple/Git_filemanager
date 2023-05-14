@@ -4,9 +4,9 @@
 
 ```bash
 #lists
-python - Installation method : https://wikidocs.net/8
-node - Installation method : https://offbyone.tistory.com/441
-nginx - Installation method : https://taewooblog.tistory.com/entry/%EC%9C%88%EB%8F%84%EC%9A%B0-10%EC%97%90-nginx-%EC%84%A4%EC%B9%98%ED%95%98%EA%B8%B0
+[python - Installation method] (https://wikidocs.net/8)
+[node - Installation method] (https://offbyone.tistory.com/441)
+[nginx - Installation method] (https://taewooblog.tistory.com/entry/%EC%9C%88%EB%8F%84%EC%9A%B0-10%EC%97%90-nginx-%EC%84%A4%EC%B9%98%ED%95%98%EA%B8%B0)
 ```
 
 ```bash
