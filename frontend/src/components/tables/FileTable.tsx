@@ -272,6 +272,9 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     } catch (error) {
       console.error("Error committing files:", error);
       message.error("An error occurred while committing the files");
+    } finally {
+      // 모달을 닫습니다.
+      setCommitModalVisible(false);
     }
   };
   
