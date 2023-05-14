@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Modal, Button, Table, Tooltip, Input, message, Checkbox } from "antd";
-import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone } from "@ant-design/icons";
+import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
@@ -122,6 +122,11 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   const handleRenameClick = (record: FileTableDataType) => {
     setFileToRename(record.name);
     setRenameModalVisible(true);
+  };
+
+  const handleCancelCommitModal = () => {
+    setCommitModalVisible(false);
+    setNewName("");
   };
 
 
@@ -621,29 +626,31 @@ async function gitRm(fileName: string) {
 
   return (
     <>
-      {
-        checkGitTypes() && 
-        <Button 
+    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      {checkGitTypes() && (
+        <Button
           type="primary"
           onClick={initRepo}
+          style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center' }}
         >
-          Create Git Repo
+          <FolderAddOutlined style={{ fontSize: '25px', marginRight: '5px' }} /> Create Git Repository
         </Button>
-      }
-
-{
-        !checkGitTypes() && 
-        <Button 
+      )}
+      {!checkGitTypes() && (
+        <Button
           type="primary"
           onClick={() => {
             getStagedFiles();
             setCommitModalVisible(true);
           }}
+          style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center' }}
         >
-          Committing Staged Changes
+          <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> Commit Staged Changes
         </Button>
-
-      }
+      )}
+    </div>
+    
+    <br/>
 
       <Table
         columns={columns}
@@ -694,9 +701,7 @@ async function gitRm(fileName: string) {
         title="Commit Staged Changes"
         visible={commitModalVisible}
         onOk={handleCommit}
-        onCancel={() => {
-          setCommitModalVisible(false);
-        }}
+        onCancel={handleCancelCommitModal}
         okText="Commit"
       >
         {stagedFiles.map((file) => (
@@ -711,8 +716,8 @@ async function gitRm(fileName: string) {
           onChange={(e) => {
             setNewName(e.target.value);
           }}
-        />
-      </Modal>
+      />
+    </Modal>
     </>
   );
 }
