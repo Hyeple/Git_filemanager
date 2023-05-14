@@ -162,3 +162,18 @@ Start-Service nginx
 
 Access to the **http://localhost/** in your browser.
 ```
+
+If you don't see the screen you want, try running the commands below again.
+Turn off localhost:3000 server and localhost:8000 server using ctrl + c
+
+```bash
+~/projectdirectory/frontend  serve -s build
+(venv)~/projectdirectory  uvicorn backend:app --host localhost --port 8000
+Restart-Service nginx
+
+Access to the **http://localhost/** in your browser.
+```
+
+
+![image](https://github.com/Hyeple/Git_filemanager/assets/86519064/b85e962b-54ff-4ece-9a41-f25bc4b4ea61)
+
