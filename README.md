@@ -24,8 +24,9 @@ https://harrybark.tistory.com/8
   You must run this command in the cmd window with **administrator**
   ```bash
   choco nginx
-  
-## libraries
+ ```
+ 
+ ## libraries
 
 python : venv, fastapi, uvicorn, gitpython
 
