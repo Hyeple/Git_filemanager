@@ -1,11 +1,9 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Modal, Button, Table, Tooltip } from "antd";
-import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined } from "@ant-design/icons";
+import { Modal, Button, Table, Tooltip, Input, message, Breadcrumb } from "antd";
+import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
-import { useQuery } from "@tanstack/react-query";
-import path from "path";
 import axios from 'axios';
 
 const NameWrapper = styled.div`
@@ -20,9 +18,18 @@ const ActionWrapper = styled.div`
   gap: 6px;
 `;
 
+const StyledBreadcrumbItem = styled(Breadcrumb.Item)`
+  font-size: 14px; // Adjust font size as needed
+  cursor: pointer;
+
+  .anticon {
+    font-size: 16px; // Adjust icon size as needed
+  }
+`;
+
 //파일 타입 받아오기 (폴더인지, 파일인지, (이건 깃 레포가 아닐 때)      언트랙인지, 모디파이드인지, 스테이징인지 커밋된건지 (이건 깃 레포일 때))
 type FileType =  "folder" | "file";
-type GitType = "null" | "untracked" | "modified" | "staged" | "committed" | "tracked";
+type GitType = "null" | "untracked" | "modified" | "staged" | "committed" | "tracked" | "back";
 
 type NameType = {
   fileName: string;
@@ -42,12 +49,14 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
   switch (type1) {
     case "folder":
       switch (type2) {
-        case "untracked":
-          return <FolderTwoTone twoToneColor="#1677ff" style={{ fontSize: 24 }} />;
         case "tracked":
           return <FolderTwoTone twoToneColor="#96F2D7" style={{ fontSize: 24 }} />;
+        case "untracked":
+          return <FolderTwoTone twoToneColor="#1677ff" style={{ fontSize: 24 }} />;
         case "null" :
           return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
+        case "back" :
+          return <FolderOpenTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
         default:
           return <FolderTwoTone twoToneColor="lightgray" style={{ fontSize: 24 }} />;
       }
@@ -74,7 +83,7 @@ const getFileIcon = (type1: FileType, type2?: GitType) => {
 //실제 돌아갈 코드 부분
 interface FileTableProps {
   path: string
-  onPathChange: (newDir: string) => void;
+  onPathChange: (newDir: string) => string;
 }
 
 //api 요청으로 백엔드에서 file list 호출
@@ -108,7 +117,26 @@ async function fetchFiles(path: string) {
 export default function FileTable( { path, onPathChange }: FileTableProps) {
   const [tableHeight, setTableHeight] = useState<number>(0);
   const [fileList, setFileList] = useState<FileTableDataType[]>([]);
+  const [isRenameModalVisible, setRenameModalVisible] = useState<boolean>(false);
+  const [fileToRename, setFileToRename] = useState<NameType | null>(null);
+  const [newName, setNewName] = useState<string>("");
+  const [stagedFiles, setStagedFiles] = useState<FileTableDataType[]>([]);
+  const [stagedArea, setStagedArea] = useState<Record<string, FileTableDataType[]>>({});
+  const [commitModalVisible, setCommitModalVisible] = useState<boolean>(false);
+  const [pathStack, setPathStack] = useState<string[]>([path]);
 
+
+  const handleRenameClick = (record: FileTableDataType) => {
+    setFileToRename(record.name);
+    setRenameModalVisible(true);
+  };
+
+  const handleCancelCommitModal = () => {
+    setCommitModalVisible(false);
+    setNewName("");
+  };
+
+  //테이블 크기 조정용
   const updateTableHeight = () => {
     const windowHeight = window.innerHeight;
     const desiredTableHeight = windowHeight - 300;
@@ -124,8 +152,10 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     };
   }, []);
 
+  //파일 리스트 불러오기
   const fetchApi = useCallback(async (path: string) => {
     const data = await fetchFiles(path);
+    //console.log("path: " + path);
     const files = data.map((item: any) => ({
       key: item.key,
       name: {
@@ -148,26 +178,354 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       withCredentials: true
     });
   }, []);
-  
-  const goBack = useCallback(async () => {
-    // Pop the last path from the backend
-    const response = await axios.post("/api/pop_path", {}, {
-      withCredentials: true
-    });
-    const data = response.data;
-  
-    if (data.path) {
-      // Fetch the files of the last path
-      await fetchApi(data.path);
-    } else {
-      console.log(data.message);
-    }
-  }, [fetchApi]);    
-  
+
   useEffect(() => {
     fetchApi(path);
   }, [fetchApi, path]);
+
+  //돌아가기
+  const goBack = useCallback(() => {
+    if (pathStack.length > 0) {
+      const newPathStack = [...pathStack];
+      newPathStack.pop();
+      setPathStack(newPathStack);
+      onPathChange(newPathStack[newPathStack.length - 1] || "");
+    } else {
+      //console.log("No more paths in the stack");
+    }
+  }, [onPathChange, pathStack]);
+
+  //breadcumb
+  const handleBreadcrumbClick = useCallback((path: string) => {
+    const newPathStack = pathStack.slice(0, pathStack.indexOf(path) + 1);
+    setPathStack(newPathStack);
+    onPathChange(newPathStack[newPathStack.length - 1] || "");
+  }, [onPathChange, pathStack]);
   
+  //깃타입인지 체크
+  const checkGitTypes = useCallback(() => {
+    return fileList.every((file) => file.name.type_git === 'null');
+  }, [fileList]);
+  
+
+  // git_init
+  const initRepo = () => {
+    const newPathStack = [...pathStack];
+    setPathStack(newPathStack);
+    const newPath = onPathChange(newPathStack[newPathStack.length - 1]);
+  
+    path = newPath;
+    axios.post("/api/init_repo", { path: newPath.toString() }, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      withCredentials: true,
+    })
+    .then((response) => {
+      if (response.data.message === "Repository initialized successfully") {
+        message.success(response.data.message);
+        //console.log("Success!")
+        //console.log(path);
+        fetchApi(path); // fetch the fileList again to update the UI
+      } else {
+        message.error(response.data.error);
+      }
+    })
+    .catch((error) => {
+      console.error("Error initializing repository:", error);
+      if (error.response && error.response.data.detail === "Cannot initialize repository in root directory") {
+        message.error("Cannot initialize repository in the root directory");
+      } else {
+        message.error("An error occurred while initializing the repository");
+      }
+    });
+  };
+  
+  const handleCommit = async () => {
+    try {
+      const gitRootPath = await getGitRootPath();
+      if (!gitRootPath) {
+        throw new Error("Git root path not found");
+      }
+  
+      const response = await axios.post("/api/git_commit", {
+        git_path: gitRootPath,
+        commit_message: newName,
+        file_paths: stagedFiles.map(file => file.name.fileName),
+      }, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
+  
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+  
+      message.success("Files committed successfully");
+  
+      // Fetch the file list again to update the UI.
+      fetchApi(path);
+    } catch (error) {
+      console.error("Error committing files:", error);
+      message.error("An error occurred while committing the files");
+    } finally {
+      // 모달을 닫음.
+      // After committing, clear the staged area for the current path
+      setStagedArea(prev => ({
+        ...prev,
+        [path]: [],
+      }));
+
+      setCommitModalVisible(false);
+    }
+  };
+  
+  const getGitRootPath = async () => {
+    try {
+      const response = await axios.post("/api/git_root_path", { path }, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const data = response.data;
+
+      if (!data.git_root_path) {
+        throw new Error("Git root path not found in response");
+      }
+      
+      //console.log("Git root path:", data.git_root_path);
+      return data.git_root_path;
+
+    } catch (error) {
+      console.error("Error fetching git root path:", error);
+    }
+  };
+
+  const getStagedFiles = useCallback(async () => {
+    try {
+      const gitRootPath = await getGitRootPath();
+      if (!gitRootPath) {
+        throw new Error("Git root path not found");
+      }
+
+      const response = await axios.post("/api/get_staged_files", { path: gitRootPath }, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const staged = response.data.files.map((file: any) => ({
+        key: file.key,
+        name: {
+          fileName: file.name,
+          type_file: file.file_type,
+          type_git: file.git_type,
+        },
+        size: file.size,
+        lastModified: file.last_modified,
+        action: file.git_type
+      }));
+
+      setStagedFiles(staged as FileTableDataType[]);
+    } catch (error) {
+      console.error("Error fetching staged files:", error);
+    }
+  }, [getGitRootPath]);
+
+  async function gitAdd(fileName: string) {
+    const filePath = `${path}/${fileName}`; // Construct the complete file path
+
+    const git_repository_path = await getGitRootPath();
+    try {
+      const response = await axios.post(
+        "/api/git_add",
+        { git_path: git_repository_path, file_path: filePath },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      message.success("File added successfully");
+
+      // Fetch the file list again to update the UI.
+      fetchApi(path);
+    } catch (error) {
+      //console.log("깃 레포지토리 주소  " + git_repository_path);
+      //console.log("파일 path 주소  " + filePath);
+      console.error("Error adding file:", error);
+      message.error("An error occurred while adding the file");
+    }
+  }
+
+  async function gitRestore(fileName: string) {
+    const filePath = `${path}/${fileName}`; // Construct the complete file path
+
+    const git_repository_path = await getGitRootPath();
+    try {
+      const response = await axios.post(
+        "/api/git_restore_staged",
+        { git_path: git_repository_path, file_path: filePath },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      message.success("File restored successfully");
+
+      // Fetch the file list again to update the UI.
+      fetchApi(path);
+    } catch (error) {
+      //("깃 레포지토리 주소  " + git_repository_path);
+      //console.log("파일 path 주소  " + filePath);
+      console.error("Error restoring file:", error);
+      message.error("An error occurred while restore the file");
+    }
+  }
+
+  async function gitUndoModify(fileName: string) {
+    const filePath = `${path}/${fileName}`; // Construct the complete file path
+
+    const git_repository_path = await getGitRootPath();
+    try {
+      const response = await axios.post(
+        "/api/git_undo_modify",
+        { git_path: git_repository_path, file_path: filePath },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      message.success("Undone Modification successfully");
+
+      // Fetch the file list again to update the UI.
+      fetchApi(path);
+    } catch (error) {
+      //console.log("깃 레포지토리 주소  " + git_repository_path);
+      //console.log("파일 path 주소  " + filePath);
+      console.error("Error undo Modification file:", error);
+      message.error("An error occurred while undone Modification the file");
+    }
+  }
+
+  async function gitRmCached(fileName: string) {
+    const filePath = `${path}/${fileName}`; // Construct the complete file path
+
+    const git_repository_path = await getGitRootPath();
+    try {
+      const response = await axios.post(
+        "/api/git_remove_cached",
+        { git_path: git_repository_path, file_path: filePath },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      message.success("File removed from index successfully");
+
+      // Fetch the file list again to update the UI.
+      fetchApi(path);
+    } catch (error) {
+      //console.log("깃 레포지토리 주소  " + git_repository_path);
+      //console.log("파일 path 주소  " + filePath);
+      console.error("Error removed file from index:", error);
+      message.error("An error occurred while removed the file from index");
+    }
+  }
+
+  async function gitRm(fileName: string) {
+    const filePath = `${path}/${fileName}`; // Construct the complete file path
+
+    const git_repository_path = await getGitRootPath();
+    try {
+      const response = await axios.post(
+        "/api/git_remove",
+        { git_path: git_repository_path, file_path: filePath },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      message.success("File removed successfully");
+
+      // Fetch the file list again to update the UI.
+      fetchApi(path);
+
+      // Update stagedArea
+      setStagedArea(prev => ({
+        ...prev,
+        [git_repository_path]: [
+          ...(prev[git_repository_path] || []),
+          {
+            key: fileName, // Or whatever key you want to use
+            name: {
+              fileName: fileName,
+              type_file: "file", // Or whatever type the file has
+              type_git: "staged", // Since we just staged it
+            },
+            size: 0, // Or whatever size the file has
+            lastModified: new Date().toISOString(), // Or whatever modification date the file has
+            action: "staged", // Since we just staged it
+          }
+        ]
+      }));
+
+      getStagedFiles();
+    } catch (error) {
+      //console.log("깃 레포지토리 주소  " + git_repository_path);
+      //console.log("파일 path 주소  " + filePath);
+      console.error("Error removed file:", error);
+      message.error("An error occurred while removed the file");
+    }
+  }
+
 
   const columns: ColumnsType<FileTableDataType> = [
     {
@@ -183,9 +541,17 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
         return (
           <NameWrapper onClick={() => {
-            if (type_file === "folder") {
-              const newPath = normalizePath(`${path}/${record.name.fileName}`); // 두 번씩 호출되는 주소를 한번으로 줄임.
-              onPathChange(newPath);
+            if (value.fileName === "..") {
+              const newPath = path;
+              //console.log(newPath);
+              goBack();
+            } else if (type_file === "folder") {
+              const newPath = normalizePath(`${path}/${record.name.fileName}`);
+              if (!pathStack.includes(newPath)) {
+                const newPathStack = [...pathStack, newPath];
+                setPathStack(newPathStack);
+                onPathChange(newPath);
+              }
             }
           }}>
             {getFileIcon(type_file, type_git)}
@@ -215,43 +581,48 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       title: "Git Action",
       dataIndex: "action",
       key: "action",
-      render: (value: GitType) => {
+      render: (value: GitType, record : FileTableDataType) => {
         if (!value) {
           return "";
         }
   
         switch (value) {
           case "untracked":
+            if (record.name.type_file !== "file"){
+              return "";
+            }
+
             return (
               <Tooltip title="Adding the file into a staging area">
-                <Button type="primary" icon={<PlusOutlined />}>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => gitAdd(record.name.fileName)}>
                   Add
                 </Button>
               </Tooltip>
-            );
-  
+          );
+          
           case "modified":
             return (
               <ActionWrapper>
                 <Tooltip title="Adding the file into a staging area">
-                  <Button type="primary" icon={<PlusOutlined />}>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => gitAdd(record.name.fileName)}>
                     Add
                   </Button>
                 </Tooltip>
-  
+          
                 <Tooltip title="Undoing the modification">
-                  <Button icon={<RedoOutlined />}>
+                  <Button icon={<RedoOutlined />} onClick = {() => gitUndoModify(record.name.fileName)}>
                     Restore
                   </Button>
                 </Tooltip>
               </ActionWrapper>
-            );
+          );
+          
   
           case "staged":
             return (
               <ActionWrapper>
                 <Tooltip title="Unstaging changes">
-                  <Button icon={<RedoOutlined />}>
+                  <Button icon={<RedoOutlined />} onClick = {() => gitRestore(record.name.fileName)}>
                     Restore
                   </Button>
                 </Tooltip>
@@ -262,19 +633,19 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
             return (
               <ActionWrapper>
                 <Tooltip title=" Untracking file">
-                  <Button icon={<DeleteOutlined />} danger>
+                  <Button icon={<DeleteOutlined />} onClick = {() => gitRmCached(record.name.fileName)} danger>
                     Untrake
                   </Button>
                 </Tooltip>
   
                 <Tooltip title="Deleting file">
-                  <Button type="primary" icon={<DeleteOutlined />} danger>
+                  <Button type="primary" icon={<DeleteOutlined />} onClick = {() => gitRm(record.name.fileName)} danger>
                     Delete
                   </Button>
                 </Tooltip>
                 
                 <Tooltip title="Renaming file">
-                  <Button icon = {<EditOutlined />} >
+                  <Button icon={<EditOutlined />} onClick={() => handleRenameClick(record)}>
                     Rename
                   </Button>
                 </Tooltip>
@@ -282,6 +653,9 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
             );
 
           case "null" :
+            return "";
+
+          case "back" :
             return "";
 
           case "tracked" :
@@ -293,11 +667,120 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
 
   return (
-    <Table
-      columns={columns}
-      dataSource={fileList}
-      pagination={false}
-      scroll={{ y: tableHeight }}
-    />
+    <>
+    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+    <Breadcrumb>
+      <StyledBreadcrumbItem key="root" onClick={() => handleBreadcrumbClick('C:/')}>
+        <HomeOutlined />
+      </StyledBreadcrumbItem>
+      {pathStack.slice(1).map((path, index) => (
+        <StyledBreadcrumbItem key={index} onClick={() => handleBreadcrumbClick(path)}>
+          {path.split('/').pop()}
+        </StyledBreadcrumbItem>
+      ))}
+    </Breadcrumb>
+
+
+
+      {checkGitTypes() && (
+        <Button
+          type="primary"
+          onClick={initRepo}
+          style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center' }}
+        >
+          <FolderAddOutlined style={{ fontSize: '25px', marginRight: '5px' }} /> Create Git Repository
+        </Button>
+      )}
+      {!checkGitTypes() && (
+        <Button
+          type="primary"
+          onClick={() => {
+            getStagedFiles();
+            setCommitModalVisible(true);
+          }}
+          style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center' }}
+        >
+          <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> Commit Staged Changes
+        </Button>
+      )}
+    </div>
+    
+    <br/>
+
+      <Table
+        columns={columns}
+        dataSource={fileList}
+        pagination={false}
+        scroll={{ y: tableHeight }}
+      />
+
+      <Modal
+        title="Rename File"
+        visible={isRenameModalVisible}
+        onOk={async () => {
+          // The new file path is constructed by replacing the old file name in the old path with the new name
+          const newPath = fileToRename 
+            ? `${path}/${fileToRename.fileName}`.replace(fileToRename.fileName, newName) 
+            : '';
+        
+          await axios.post(`/api/git_move`, { 
+            git_path: await getGitRootPath(),
+            old_file_path: fileToRename ? `${path}/${fileToRename.fileName}` : '', 
+            new_file_path: newPath
+          });
+        
+          // Fetch the file list again to update the UI.
+          await fetchApi(path);
+        
+          // Close the modal.
+          setRenameModalVisible(false);
+          setFileToRename(null);
+          setNewName(""); // Reset newName state
+        }}
+        onCancel={() => {
+          setRenameModalVisible(false);
+          setNewName(""); // Reset newName state
+        }}
+      >
+        <Input
+          placeholder="Enter new file name"
+          value={newName}
+          onChange={e => {
+            setNewName(e.target.value);
+          }}
+
+        />
+      </Modal>
+
+      <Modal
+        title="Commit Staged Changes"
+        visible={commitModalVisible}
+        onOk={handleCommit}
+        onCancel={handleCancelCommitModal}
+        okText="Commit"
+      >
+        {stagedFiles.map((file) => (
+          <p key={file.key}>{file.name.fileName}</p>
+        ))}
+
+        {stagedArea[path] && stagedArea[path].map((file) => (
+            <p key={file.key}>
+              {file.action === 'staged' && 'deleted:   '}
+              {file.name.fileName}
+            </p>
+          ))}
+
+
+        <br />
+
+        <Input
+          placeholder="Enter commit message"
+          value={newName}
+          onChange={(e) => {
+            setNewName(e.target.value);
+          }}
+      />
+    </Modal>
+    </>
   );
 }
