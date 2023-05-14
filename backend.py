@@ -174,6 +174,9 @@ async def init_repo(repo_path: RepoPath):
     path_str = repo_path.path
     logging.info(f"INIT_PATH: {path_str}")
 
+    if path_str == "C:/":
+        raise HTTPException(status_code=400, detail="Cannot initialize repository in root directory")
+
     try:
         logging.info(f"try문 로깅: {path_str}")
         # Initialize the directory as a git repository

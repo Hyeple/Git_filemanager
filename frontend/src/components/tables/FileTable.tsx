@@ -216,7 +216,11 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     })
     .catch((error) => {
       console.error("Error initializing repository:", error);
-      message.error("An error occurred while initializing the repository");
+      if (error.response && error.response.data.detail === "Cannot initialize repository in root directory") {
+        message.error("Cannot initialize repository in the root directory");
+      } else {
+        message.error("An error occurred while initializing the repository");
+      }
     });
   };
   
