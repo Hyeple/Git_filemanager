@@ -264,6 +264,20 @@ async def git_restore(item: RestoreItem):
     return {"message" : "File restored successfully."}
 
 
+class GitRootPath(BaseModel):
+    path: str
+
+
+@app.post("/api/git_root_path")
+async def get_git_root_path(item: GitRootPath):
+    try:
+        repo = Repo(item.path, search_parent_directories=True)
+        git_root_path = repo.git.rev_parse("--show-toplevel")
+        return {"git_root_path": git_root_path}
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+
+
 @app.get("/{path:path}", include_in_schema=False)
 async def catch_all(path: str):
     return FileResponse("frontend/build/index.html")

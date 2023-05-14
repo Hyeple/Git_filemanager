@@ -221,8 +221,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   };
   
   
-
-  
   // /api/git_add
 async function gitAdd(filePath: string) {
   try {
@@ -280,7 +278,33 @@ const handleCommit = async () => {
   }
 };
 
-  
+const getGitRootPath = async () => {
+  try {
+    const response = await axios.post("/api/git_root_path", { path }, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      withCredentials: true,
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    const data = response.data;
+
+    if (!data.git_root_path) {
+      throw new Error("Git root path not found in response");
+    }
+    
+    console.log("Git root path:", data.git_root_path);
+    return data.git_root_path;
+
+  } catch (error) {
+    console.error("Error fetching git root path:", error);
+  }
+};
+
 
   const columns: ColumnsType<FileTableDataType> = [
     {
@@ -418,6 +442,12 @@ const handleCommit = async () => {
 
   return (
     <>
+    <Button
+      type="primary"
+      onClick={getGitRootPath}
+    >
+      Get Git Root Path
+    </Button>
       {
         checkGitTypes() && 
         <Button 
