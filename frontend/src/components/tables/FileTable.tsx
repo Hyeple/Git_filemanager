@@ -192,34 +192,35 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   }, [fileList]);
   
   // git_init
-  const initRepo = async () => {
+  const initRepo = () => {
     const newPathStack = [...pathStack];
     setPathStack(newPathStack);
     const newPath = onPathChange(newPathStack[newPathStack.length - 1]);
     console.log("시시발  " + newPath);
-
-    try {
-      path = newPath;
-      const response = await axios.post("/init_repo", { path: newPath }, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
-      });
-
-      if (response.data.message === "Git repository initialized") {
+  
+    path = newPath;
+    axios.post("/api/init_repo", { path: newPath.toString() }, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      withCredentials: true,
+    })
+    .then((response) => {
+      if (response.data.message === "Repository initialized successfully") {
         message.success(response.data.message);
         console.log("Success!")
         fetchApi(path); // fetch the fileList again to update the UI
       } else {
         message.error(response.data.error);
       }
-    } catch (error) {
+    })
+    .catch((error) => {
       console.log("시발  " + path);
       console.error("Error initializing repository:", error);
       message.error("An error occurred while initializing the repository");
-    }
+    });
   };
+  
   
 
   

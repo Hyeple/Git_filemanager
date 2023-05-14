@@ -163,22 +163,23 @@ async def reset_path_stack():
     return {"message": "Path stack reset successfully"}
 
 
-# git_init
-@app.post("/init_repo")
-async def init_repo(path: Path):
-    logging.info(f"INIT_PATH: {path}")
-    # Check if the repo_path is a valid directory
-    if not os.path.exists(path) or not os.path.isdir(path):
-        logging.error(f"INIT_PATH: {path}")
-        raise HTTPException (status_code=404, detail="Directory not found")
+class RepoPath(BaseModel):
+    path: Optional[str] = None
+
+@app.post("/api/init_repo")
+async def init_repo(repo_path: RepoPath):
+    path_str = repo_path.path
+    logging.info(f"INIT_PATH: {path_str}")
 
     try:
+        logging.info(f"try문 로깅: {path_str}")
         # Initialize the directory as a git repository
-        Repo.init(path)
+        Repo.init(path_str)
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "Repository initialized successfully"}
+
 
 # git_add
 class AddItem(BaseModel):
