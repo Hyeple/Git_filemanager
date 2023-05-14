@@ -243,28 +243,31 @@ async def commit(item: CommitItem):
 
 
 # git_restore
-class RestoreItem(BaseModel):
-    path: str
+class GitRestoreRequest(BaseModel):
+    git_path: str
     file_path: str
 
+@app.post("/api/git_restore_staged")
+async def git_restore(request: GitRestoreRequest):
+    git_path = request.git_path
+    file_path = request.file_path
 
-@app.post("/api/git_restore")
-async def git_restore(item: RestoreItem):
     # Check if the path is a valid directory
-    if not os.path.exists(item.path) or not os.path.isdir(item.path):
-        raise HTTPException(status_code=404, detail="Directory is not found.")
-    
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
     try:
-        repo = Repo(item.path)
+        repo = Repo(git_path)
     except InvalidGitRepositoryError:
-        raise HTTPException(status_code=400, detail="The Directory is not a repository.")
-    
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+
+    # Try to restore the file
     try:
-        repo.git.restore(item.file_path)
+        repo.git.restore("--staged", file_path)
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-    return {"message" : "File restored successfully."}
+
+    return {"message": "File restored successfully"}
 
 
 class GitRootPath(BaseModel):

@@ -313,6 +313,39 @@ async function gitAdd(fileName: string) {
 }
 
 
+async function gitRestore(fileName: string) {
+  const filePath = `${path}/${fileName}`; // Construct the complete file path
+
+  const git_repository_path = await getGitRootPath();
+  try {
+    const response = await axios.post(
+      "/api/git_restore_staged",
+      { git_path: git_repository_path, file_path: filePath },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      }
+    );
+
+    if (response.status !== 200) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    message.success("File restored successfully");
+
+    // Fetch the file list again to update the UI.
+    fetchApi(path);
+  } catch (error) {
+    console.log("깃 레포지토리 주소  " + git_repository_path);
+    console.log("파일 path 주소  " + filePath);
+    console.error("Error restoring file:", error);
+    message.error("An error occurred while restore the file");
+  }
+}
+
+
 
 
 
@@ -407,7 +440,7 @@ async function gitAdd(fileName: string) {
             return (
               <ActionWrapper>
                 <Tooltip title="Unstaging changes">
-                  <Button icon={<RedoOutlined />}>
+                  <Button icon={<RedoOutlined />} onClick = {() => gitRestore(record.name.fileName)}>
                     Restore
                   </Button>
                 </Tooltip>
