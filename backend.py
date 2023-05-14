@@ -355,9 +355,39 @@ async def git_remove(request: GitRemoveRequest):
     return {"message": "File removed successfully"}
 
 
+#git_mv
+class GitRenameRequest(BaseModel):
+    git_path: str
+    old_file_path: str
+    new_file_path: str
+
+@app.post("/api/git_move")
+async def git_rename(request: GitRenameRequest):
+    git_path = request.git_path
+    old_file_path = request.old_file_path
+    new_file_path = request.new_file_path
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+
+    # Try to move the file
+    try:
+        repo.git.mv(old_file_path, new_file_path)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "File renamed successfully"}
+
+
+
 class GitRootPath(BaseModel):
     path: str
-
 
 @app.post("/api/git_root_path")
 async def get_git_root_path(item: GitRootPath):

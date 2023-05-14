@@ -615,16 +615,20 @@ async function gitRm(fileName: string) {
         title="Rename File"
         visible={isRenameModalVisible}
         onOk={async () => {
-          // 백 실제 api랑 연결해야함.
-          const newName = "newName"; // Get this value from your form.
-          await axios.post(`/api/rename_file`, { 
-            oldName: fileToRename?.fileName, 
-            newName
+          // The new file path is constructed by replacing the old file name in the old path with the new name
+          const newPath = fileToRename 
+            ? `${path}/${fileToRename.fileName}`.replace(fileToRename.fileName, newName) 
+            : '';
+        
+          await axios.post(`/api/git_move`, { 
+            git_path: await getGitRootPath(),
+            old_file_path: fileToRename ? `${path}/${fileToRename.fileName}` : '', 
+            new_file_path: newPath
           });
-
+        
           // Fetch the file list again to update the UI.
           await fetchApi(path);
-
+        
           // Close the modal.
           setRenameModalVisible(false);
           setFileToRename(null);
