@@ -220,32 +220,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     });
   };
   
-  
-  // /api/git_add
-async function gitAdd(filePath: string) {
-  try {
-    const response = await axios.post("/api/git_add", { path, file_path: filePath }, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      withCredentials: true,
-    });
-
-    if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-
-    message.success("File added successfully");
-
-    // Fetch the file list again to update the UI.
-    fetchApi(path);
-  } catch (error) {
-    console.log("깃 add 시발  " + path);
-    console.error("Error adding file:", error);
-    message.error("An error occurred while adding the file");
-  }
-}
-
 const getStagedFiles = useCallback(() => {
   const staged = fileList.filter(file => file.action === 'staged');
   setStagedFiles(staged);
@@ -304,6 +278,42 @@ const getGitRootPath = async () => {
     console.error("Error fetching git root path:", error);
   }
 };
+
+
+async function gitAdd(fileName: string) {
+  const filePath = `${path}/${fileName}`; // Construct the complete file path
+
+  const git_repository_path = await getGitRootPath();
+  try {
+    const response = await axios.post(
+      "/api/git_add",
+      { git_path: git_repository_path, file_path: filePath },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      }
+    );
+
+    if (response.status !== 200) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    message.success("File added successfully");
+
+    // Fetch the file list again to update the UI.
+    fetchApi(path);
+  } catch (error) {
+    console.log("깃 레포지토리 주소  " + git_repository_path);
+    console.log("파일 path 주소  " + filePath);
+    console.error("Error adding file:", error);
+    message.error("An error occurred while adding the file");
+  }
+}
+
+
+
 
 
   const columns: ColumnsType<FileTableDataType> = [
@@ -373,8 +383,8 @@ const getGitRootPath = async () => {
                   Add
                 </Button>
               </Tooltip>
-            );
-  
+          );
+          
           case "modified":
             return (
               <ActionWrapper>
@@ -383,14 +393,15 @@ const getGitRootPath = async () => {
                     Add
                   </Button>
                 </Tooltip>
-  
+          
                 <Tooltip title="Undoing the modification">
                   <Button icon={<RedoOutlined />}>
                     Restore
                   </Button>
                 </Tooltip>
               </ActionWrapper>
-            );
+          );
+          
   
           case "staged":
             return (

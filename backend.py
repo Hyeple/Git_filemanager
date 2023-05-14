@@ -185,18 +185,21 @@ async def init_repo(repo_path: RepoPath):
 
 
 # git_add
-class AddItem(BaseModel):
-    path: str
+class GitAddRequest(BaseModel):
+    git_path: str
     file_path: str
 
 @app.post("/api/git_add")
-async def git_add(path: str, file_path: str): # path means git repository path. file_path means directory path.
+async def git_add(request: GitAddRequest):
+    git_path = request.git_path
+    file_path = request.file_path
+
     # Check if the path is a valid directory
-    if not os.path.exists(path) or not os.path.isdir(path):
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
         raise HTTPException(status_code=404, detail="Directory not found")
 
     try:
-        repo = Repo(path)
+        repo = Repo(git_path)
     except InvalidGitRepositoryError:
         raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
 
