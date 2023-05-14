@@ -321,6 +321,7 @@ async def git_remove(request: GitRemoveRequest):
     # Try to remove the file
     try:
         repo.git.rm(file_path)
+        repo.index.commit("Remove file from index")
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -358,7 +359,7 @@ async def git_rename(request: GitRenameRequest):
 
 
 #git_commit
-class GitCommitRequest(BaseModel):
+class GitCommitRequest(BaseModel):  
     git_path: str
     commit_message: str
     file_paths: list[str]
@@ -381,6 +382,7 @@ async def git_commit(request: GitCommitRequest):
     # Add files to staging area
     for file_path in file_paths:
         try:
+            logging.info(f"committed path: {file_path}")
             repo.git.add(file_path)
         except GitCommandError as e:
             raise HTTPException(status_code=500, detail=str(e))
@@ -388,7 +390,6 @@ async def git_commit(request: GitCommitRequest):
     # Commit changes
     try:
         repo.index.commit(commit_message)
-        repo.git.rm('--cached', file_path)
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
