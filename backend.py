@@ -242,7 +242,7 @@ async def commit(item: CommitItem):
     return {"message": "Commit successful"}
 
 
-# git_restore
+# git_restore_staged
 class GitRestoreRequest(BaseModel):
     git_path: str
     file_path: str
@@ -268,6 +268,36 @@ async def git_restore(request: GitRestoreRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "File restored successfully"}
+
+
+
+#git_undomodify
+class GitUndoModifyRequest(BaseModel):
+    git_path: str
+    file_path: str
+
+@app.post("/api/git_undo_modify")
+async def git_undo_modify(request: GitUndoModifyRequest):
+    git_path = request.git_path
+    file_path = request.file_path
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+
+    # Try to undo the modification
+    try:
+        repo.git.restore(file_path)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "Undone Modification successfully"}
+
 
 
 class GitRootPath(BaseModel):
