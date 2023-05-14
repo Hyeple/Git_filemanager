@@ -212,36 +212,6 @@ async def git_add(request: GitAddRequest):
     return {"message": "File added successfully"}
 
 
-# git_commit
-class CommitItem(BaseModel):
-    path: str
-    message: str
-
-@app.post("/api/commit") # 스테이징된 파일이라면 커밋이 가능하다!
-async def commit(item: CommitItem):
-    # Check if the path is a valid directory
-    if not os.path.exists(item.path) or not os.path.isdir(item.path):
-        raise HTTPException(status_code=404, detail="Directory not found")
-
-    try:
-        repo = Repo(item.path)
-    except InvalidGitRepositoryError:
-        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
-
-    # Check if there are any staged files
-    diff_index = repo.index.diff(None)
-    if len(diff_index) == 0:
-        raise HTTPException(status_code=400, detail="No files staged for commit")
-
-    # Try to commit
-    try:
-        repo.index.commit(item.message)
-    except GitCommandError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    return {"message": "Commit successful"}
-
-
 # git_restore_staged
 class GitRestoreRequest(BaseModel):
     git_path: str
@@ -384,6 +354,73 @@ async def git_rename(request: GitRenameRequest):
 
     return {"message": "File renamed successfully"}
 
+
+#git_commit
+class GitCommitRequest(BaseModel):
+    git_path: str
+    commit_message: str
+    file_paths: list[str]
+
+@app.post("/api/git_commit")
+async def git_commit(request: GitCommitRequest):
+    git_path = request.git_path
+    commit_message = request.commit_message
+    file_paths = request.file_paths
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+
+    # Add files to staging area
+    for file_path in file_paths:
+        try:
+            repo.git.add(file_path)
+        except GitCommandError as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # Commit changes
+    try:
+        repo.index.commit(commit_message)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "Files committed successfully"}
+
+
+@app.post("/api/get_staged_files")
+async def get_staged_files(repo_path: RepoPath):
+    path_str = repo_path.path
+    logging.info(f"GET_STAGED_FILES_PATH: {path_str}")
+
+    try:
+        repo = Repo(path_str)
+        staged_files = []
+        for item in repo.index.diff("HEAD"):
+            file_path = os.path.join(path_str, item.a_path)
+            if os.path.isfile(file_path):
+                file_size = os.path.getsize(file_path)
+                last_modified = datetime.datetime.fromtimestamp(
+                    os.path.getmtime(file_path)).strftime("%Y-%m-%d %H:%M:%S")
+                staged_files.append({
+                    'key': len(staged_files),
+                    'name': item.a_path,
+                    'file_type': 'file',
+                    'git_type': 'staged',
+                    'size': file_size,
+                    'last_modified': last_modified
+                })
+
+        return {"files": staged_files}
+
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "Staged files fetched successfully"}
 
 
 class GitRootPath(BaseModel):

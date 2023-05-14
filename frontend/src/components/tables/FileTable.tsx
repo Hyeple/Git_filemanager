@@ -220,37 +220,39 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     });
   };
   
-const getStagedFiles = useCallback(() => {
-  const staged = fileList.filter(file => file.action === 'staged');
-  setStagedFiles(staged);
-}, [fileList]);
 
-const handleCommit = async () => {
-  try {
-    const response = await axios.post("/api/commit", {
-      path,
-      commit_message: newName, // Assuming newName contains the commit message
-      file_list: stagedFiles.map(file => file.name.fileName), // Extract file names from stagedFiles
-    }, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      withCredentials: true,
-    });
-
-    if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}`);
+  const handleCommit = async () => {
+    try {
+      const gitRootPath = await getGitRootPath();
+      if (!gitRootPath) {
+        throw new Error("Git root path not found");
+      }
+  
+      const response = await axios.post("/api/git_commit", {
+        git_path: gitRootPath,
+        commit_message: newName,
+        file_paths: stagedFiles.map(file => file.name.fileName),
+      }, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
+  
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+  
+      message.success("Files committed successfully");
+  
+      // Fetch the file list again to update the UI.
+      fetchApi(path);
+    } catch (error) {
+      console.error("Error committing files:", error);
+      message.error("An error occurred while committing the files");
     }
-
-    message.success("Files committed successfully");
-
-    // Fetch the file list again to update the UI.
-    fetchApi(path);
-  } catch (error) {
-    console.error("Error committing files:", error);
-    message.error("An error occurred while committing the files");
-  }
-};
+  };
+  
 
 const getGitRootPath = async () => {
   try {
@@ -279,6 +281,41 @@ const getGitRootPath = async () => {
   }
 };
 
+const getStagedFiles = useCallback(async () => {
+  try {
+    const gitRootPath = await getGitRootPath();
+    if (!gitRootPath) {
+      throw new Error("Git root path not found");
+    }
+
+    const response = await axios.post("/api/get_staged_files", { path: gitRootPath }, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      withCredentials: true,
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    const staged = response.data.files.map((file: any) => ({
+      key: file.key,
+      name: {
+        fileName: file.name,
+        type_file: file.file_type,
+        type_git: file.git_type,
+      },
+      size: file.size,
+      lastModified: file.last_modified,
+      action: file.git_type
+    }));
+
+    setStagedFiles(staged as FileTableDataType[]);
+  } catch (error) {
+    console.error("Error fetching staged files:", error);
+  }
+}, [getGitRootPath]);
 
 async function gitAdd(fileName: string) {
   const filePath = `${path}/${fileName}`; // Construct the complete file path
