@@ -405,11 +405,42 @@ async function gitRmCached(fileName: string) {
   } catch (error) {
     console.log("깃 레포지토리 주소  " + git_repository_path);
     console.log("파일 path 주소  " + filePath);
-    console.error("Error removed file at git repo:", error);
-    message.error("An error occurred while removed the file at git repo");
+    console.error("Error removed file from index:", error);
+    message.error("An error occurred while removed the file from index");
   }
 }
 
+async function gitRm(fileName: string) {
+  const filePath = `${path}/${fileName}`; // Construct the complete file path
+
+  const git_repository_path = await getGitRootPath();
+  try {
+    const response = await axios.post(
+      "/api/git_remove",
+      { git_path: git_repository_path, file_path: filePath },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      }
+    );
+
+    if (response.status !== 200) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    message.success("File removed successfully");
+
+    // Fetch the file list again to update the UI.
+    fetchApi(path);
+  } catch (error) {
+    console.log("깃 레포지토리 주소  " + git_repository_path);
+    console.log("파일 path 주소  " + filePath);
+    console.error("Error removed file:", error);
+    message.error("An error occurred while removed the file");
+  }
+}
 
 
   const columns: ColumnsType<FileTableDataType> = [
@@ -520,7 +551,7 @@ async function gitRmCached(fileName: string) {
                 </Tooltip>
   
                 <Tooltip title="Deleting file">
-                  <Button type="primary" icon={<DeleteOutlined />} danger>
+                  <Button type="primary" icon={<DeleteOutlined />} onClick = {() => gitRm(record.name.fileName)} danger>
                     Delete
                   </Button>
                 </Tooltip>
@@ -549,12 +580,6 @@ async function gitRmCached(fileName: string) {
 
   return (
     <>
-    <Button
-      type="primary"
-      onClick={getGitRootPath}
-    >
-      Get Git Root Path
-    </Button>
       {
         checkGitTypes() && 
         <Button 

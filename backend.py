@@ -298,13 +298,14 @@ async def git_undo_modify(request: GitUndoModifyRequest):
 
     return {"message": "Undone Modification successfully"}
 
-#git_rm --cached
-class GitRemoveRequest(BaseModel):
+
+class GitUntrackRequest(BaseModel):
     git_path: str
     file_path: str
 
+#git_rm --cached
 @app.post("/api/git_remove_cached")
-async def git_remove(request: GitRemoveRequest):
+async def git_remove(request: GitUntrackRequest):
     git_path = request.git_path
     file_path = request.file_path
 
@@ -324,6 +325,34 @@ async def git_remove(request: GitRemoveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "File removed from index successfully"}
+
+
+class GitRemoveRequest(BaseModel):
+    git_path: str
+    file_path: str
+
+#git_rm
+@app.post("/api/git_remove")
+async def git_remove(request: GitRemoveRequest):
+    git_path = request.git_path
+    file_path = request.file_path
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+
+    # Try to remove the file
+    try:
+        repo.git.rm(file_path)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "File removed successfully"}
 
 
 class GitRootPath(BaseModel):
