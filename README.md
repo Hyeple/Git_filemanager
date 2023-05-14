@@ -1,22 +1,30 @@
-# OSS Project 1
+# OSS Project 1 : 📁Git_FileManager
+
+This program is a Git file manager designed to run on the Windows environment. 
+Please run it on a Windows system.
+
+It enables you to manage files on your computer's C drive. 
+It offers functionalities such as file exploration, Git repository initialization, and various Git actions to assist you in file management using Git.
 
 
 # Installation
 
 ## lists
 
-### [python - Installation method] (https://wikidocs.net/8)
+### [python - Installation method] 
+https://wikidocs.net/8
 
-### [node - Installation method] (https://offbyone.tistory.com/441)
+### [node - Installation method] 
+https://offbyone.tistory.com/441
 
-### [Chocolatey for nginx - Installation method] (https://harrybark.tistory.com/8)
+### [Chocolatey for nginx - Installation method] 
+https://harrybark.tistory.com/8
 
 ### [nginx - Installation method]
   You must run this command in the cmd window with **administrator**
   ```bash
   choco nginx
-  ```
-
+  
 ## libraries
 
 python : venv, fastapi, uvicorn, gitpython
@@ -174,6 +182,6 @@ Restart-Service nginx
 Access to the **http://localhost/** in your browser.
 ```
 
-
 ![image](https://github.com/Hyeple/Git_filemanager/assets/86519064/b85e962b-54ff-4ece-9a41-f25bc4b4ea61)
 
+If you see a screen like this, it means that it has been executed correctly.
