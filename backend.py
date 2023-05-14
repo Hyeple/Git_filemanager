@@ -388,6 +388,7 @@ async def git_commit(request: GitCommitRequest):
     # Commit changes
     try:
         repo.index.commit(commit_message)
+        repo.git.rm('--cached', file_path)
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
