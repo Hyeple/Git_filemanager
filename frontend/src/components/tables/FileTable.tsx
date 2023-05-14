@@ -565,6 +565,10 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   
         switch (value) {
           case "untracked":
+            if (record.name.type_file !== "file"){
+              return "";
+            }
+
             return (
               <Tooltip title="Adding the file into a staging area">
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => gitAdd(record.name.fileName)}>
