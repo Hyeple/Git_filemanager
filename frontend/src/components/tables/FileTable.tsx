@@ -1,11 +1,9 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Modal, Button, Table, Tooltip, Input, message, Checkbox } from "antd";
-import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined } from "@ant-design/icons";
+import { Modal, Button, Table, Tooltip, Input, message, Breadcrumb } from "antd";
+import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
-import { useQuery } from "@tanstack/react-query";
-import path from "path";
 import axios from 'axios';
 
 const NameWrapper = styled.div`
@@ -18,6 +16,15 @@ const ActionWrapper = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
+`;
+
+const StyledBreadcrumbItem = styled(Breadcrumb.Item)`
+  font-size: 14px; // Adjust font size as needed
+  cursor: pointer;
+
+  .anticon {
+    font-size: 16px; // Adjust icon size as needed
+  }
 `;
 
 //파일 타입 받아오기 (폴더인지, 파일인지, (이건 깃 레포가 아닐 때)      언트랙인지, 모디파이드인지, 스테이징인지 커밋된건지 (이건 깃 레포일 때))
@@ -118,6 +125,8 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   const [stagedFiles, setStagedFiles] = useState<FileTableDataType[]>([]);
   const [commitModalVisible, setCommitModalVisible] = useState<boolean>(false);
 
+  const [pathStack, setPathStack] = useState<string[]>([path]);
+
 
   const handleRenameClick = (record: FileTableDataType) => {
     setFileToRename(record.name);
@@ -129,7 +138,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     setNewName("");
   };
 
-
+  //테이블 크기 조정용
   const updateTableHeight = () => {
     const windowHeight = window.innerHeight;
     const desiredTableHeight = windowHeight - 300;
@@ -148,7 +157,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   //파일 리스트 불러오기
   const fetchApi = useCallback(async (path: string) => {
     const data = await fetchFiles(path);
-    console.log("path: " + path);
+    //console.log("path: " + path);
     const files = data.map((item: any) => ({
       key: item.key,
       name: {
@@ -176,9 +185,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     fetchApi(path);
   }, [fetchApi, path]);
 
-  const [pathStack, setPathStack] = useState<string[]>([path]);
-
-
   //돌아가기
   const goBack = useCallback(() => {
     if (pathStack.length > 0) {
@@ -187,15 +193,23 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       setPathStack(newPathStack);
       onPathChange(newPathStack[newPathStack.length - 1] || "");
     } else {
-      console.log("No more paths in the stack");
+      //console.log("No more paths in the stack");
     }
   }, [onPathChange, pathStack]);
+
+  //breadcumb
+  const handleBreadcrumbClick = useCallback((path: string) => {
+    const newPathStack = pathStack.slice(0, pathStack.indexOf(path) + 1);
+    setPathStack(newPathStack);
+    onPathChange(newPathStack[newPathStack.length - 1] || "");
+  }, [onPathChange, pathStack]);
   
-  //
+  //깃타입인지 체크
   const checkGitTypes = useCallback(() => {
     return fileList.every((file) => file.name.type_git === 'null');
   }, [fileList]);
   
+
   // git_init
   const initRepo = () => {
     const newPathStack = [...pathStack];
@@ -212,8 +226,8 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     .then((response) => {
       if (response.data.message === "Repository initialized successfully") {
         message.success(response.data.message);
-        console.log("Success!")
-        console.log(path);
+        //console.log("Success!")
+        //console.log(path);
         fetchApi(path); // fetch the fileList again to update the UI
       } else {
         message.error(response.data.error);
@@ -229,7 +243,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     });
   };
   
-
   const handleCommit = async () => {
     try {
       const gitRootPath = await getGitRootPath();
@@ -262,231 +275,230 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     }
   };
   
-
-const getGitRootPath = async () => {
-  try {
-    const response = await axios.post("/api/git_root_path", { path }, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      withCredentials: true,
-    });
-
-    if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-
-    const data = response.data;
-
-    if (!data.git_root_path) {
-      throw new Error("Git root path not found in response");
-    }
-    
-    console.log("Git root path:", data.git_root_path);
-    return data.git_root_path;
-
-  } catch (error) {
-    console.error("Error fetching git root path:", error);
-  }
-};
-
-const getStagedFiles = useCallback(async () => {
-  try {
-    const gitRootPath = await getGitRootPath();
-    if (!gitRootPath) {
-      throw new Error("Git root path not found");
-    }
-
-    const response = await axios.post("/api/get_staged_files", { path: gitRootPath }, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      withCredentials: true,
-    });
-
-    if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-
-    const staged = response.data.files.map((file: any) => ({
-      key: file.key,
-      name: {
-        fileName: file.name,
-        type_file: file.file_type,
-        type_git: file.git_type,
-      },
-      size: file.size,
-      lastModified: file.last_modified,
-      action: file.git_type
-    }));
-
-    setStagedFiles(staged as FileTableDataType[]);
-  } catch (error) {
-    console.error("Error fetching staged files:", error);
-  }
-}, [getGitRootPath]);
-
-async function gitAdd(fileName: string) {
-  const filePath = `${path}/${fileName}`; // Construct the complete file path
-
-  const git_repository_path = await getGitRootPath();
-  try {
-    const response = await axios.post(
-      "/api/git_add",
-      { git_path: git_repository_path, file_path: filePath },
-      {
+  const getGitRootPath = async () => {
+    try {
+      const response = await axios.post("/api/git_root_path", { path }, {
         headers: {
           "Content-Type": "application/json",
         },
         withCredentials: true,
+      });
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
       }
-    );
 
-    if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}`);
+      const data = response.data;
+
+      if (!data.git_root_path) {
+        throw new Error("Git root path not found in response");
+      }
+      
+      //console.log("Git root path:", data.git_root_path);
+      return data.git_root_path;
+
+    } catch (error) {
+      console.error("Error fetching git root path:", error);
     }
+  };
 
-    message.success("File added successfully");
+  const getStagedFiles = useCallback(async () => {
+    try {
+      const gitRootPath = await getGitRootPath();
+      if (!gitRootPath) {
+        throw new Error("Git root path not found");
+      }
 
-    // Fetch the file list again to update the UI.
-    fetchApi(path);
-  } catch (error) {
-    console.log("깃 레포지토리 주소  " + git_repository_path);
-    console.log("파일 path 주소  " + filePath);
-    console.error("Error adding file:", error);
-    message.error("An error occurred while adding the file");
-  }
-}
-
-
-async function gitRestore(fileName: string) {
-  const filePath = `${path}/${fileName}`; // Construct the complete file path
-
-  const git_repository_path = await getGitRootPath();
-  try {
-    const response = await axios.post(
-      "/api/git_restore_staged",
-      { git_path: git_repository_path, file_path: filePath },
-      {
+      const response = await axios.post("/api/get_staged_files", { path: gitRootPath }, {
         headers: {
           "Content-Type": "application/json",
         },
         withCredentials: true,
+      });
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
       }
-    );
 
-    if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-
-    message.success("File restored successfully");
-
-    // Fetch the file list again to update the UI.
-    fetchApi(path);
-  } catch (error) {
-    console.log("깃 레포지토리 주소  " + git_repository_path);
-    console.log("파일 path 주소  " + filePath);
-    console.error("Error restoring file:", error);
-    message.error("An error occurred while restore the file");
-  }
-}
-
-
-async function gitUndoModify(fileName: string) {
-  const filePath = `${path}/${fileName}`; // Construct the complete file path
-
-  const git_repository_path = await getGitRootPath();
-  try {
-    const response = await axios.post(
-      "/api/git_undo_modify",
-      { git_path: git_repository_path, file_path: filePath },
-      {
-        headers: {
-          "Content-Type": "application/json",
+      const staged = response.data.files.map((file: any) => ({
+        key: file.key,
+        name: {
+          fileName: file.name,
+          type_file: file.file_type,
+          type_git: file.git_type,
         },
-        withCredentials: true,
-      }
-    );
+        size: file.size,
+        lastModified: file.last_modified,
+        action: file.git_type
+      }));
 
-    if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}`);
+      setStagedFiles(staged as FileTableDataType[]);
+    } catch (error) {
+      console.error("Error fetching staged files:", error);
     }
+  }, [getGitRootPath]);
 
-    message.success("Undone Modification successfully");
+  async function gitAdd(fileName: string) {
+    const filePath = `${path}/${fileName}`; // Construct the complete file path
 
-    // Fetch the file list again to update the UI.
-    fetchApi(path);
-  } catch (error) {
-    console.log("깃 레포지토리 주소  " + git_repository_path);
-    console.log("파일 path 주소  " + filePath);
-    console.error("Error undo Modification file:", error);
-    message.error("An error occurred while undone Modification the file");
-  }
-}
+    const git_repository_path = await getGitRootPath();
+    try {
+      const response = await axios.post(
+        "/api/git_add",
+        { git_path: git_repository_path, file_path: filePath },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
 
-async function gitRmCached(fileName: string) {
-  const filePath = `${path}/${fileName}`; // Construct the complete file path
-
-  const git_repository_path = await getGitRootPath();
-  try {
-    const response = await axios.post(
-      "/api/git_remove_cached",
-      { git_path: git_repository_path, file_path: filePath },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
       }
-    );
 
-    if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}`);
+      message.success("File added successfully");
+
+      // Fetch the file list again to update the UI.
+      fetchApi(path);
+    } catch (error) {
+      //console.log("깃 레포지토리 주소  " + git_repository_path);
+      //console.log("파일 path 주소  " + filePath);
+      console.error("Error adding file:", error);
+      message.error("An error occurred while adding the file");
     }
-
-    message.success("File removed from index successfully");
-
-    // Fetch the file list again to update the UI.
-    fetchApi(path);
-  } catch (error) {
-    console.log("깃 레포지토리 주소  " + git_repository_path);
-    console.log("파일 path 주소  " + filePath);
-    console.error("Error removed file from index:", error);
-    message.error("An error occurred while removed the file from index");
   }
-}
 
-async function gitRm(fileName: string) {
-  const filePath = `${path}/${fileName}`; // Construct the complete file path
+  async function gitRestore(fileName: string) {
+    const filePath = `${path}/${fileName}`; // Construct the complete file path
 
-  const git_repository_path = await getGitRootPath();
-  try {
-    const response = await axios.post(
-      "/api/git_remove",
-      { git_path: git_repository_path, file_path: filePath },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
+    const git_repository_path = await getGitRootPath();
+    try {
+      const response = await axios.post(
+        "/api/git_restore_staged",
+        { git_path: git_repository_path, file_path: filePath },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
       }
-    );
 
-    if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}`);
+      message.success("File restored successfully");
+
+      // Fetch the file list again to update the UI.
+      fetchApi(path);
+    } catch (error) {
+      //("깃 레포지토리 주소  " + git_repository_path);
+      //console.log("파일 path 주소  " + filePath);
+      console.error("Error restoring file:", error);
+      message.error("An error occurred while restore the file");
     }
-
-    message.success("File removed successfully");
-
-    // Fetch the file list again to update the UI.
-    fetchApi(path);
-  } catch (error) {
-    console.log("깃 레포지토리 주소  " + git_repository_path);
-    console.log("파일 path 주소  " + filePath);
-    console.error("Error removed file:", error);
-    message.error("An error occurred while removed the file");
   }
-}
+
+  async function gitUndoModify(fileName: string) {
+    const filePath = `${path}/${fileName}`; // Construct the complete file path
+
+    const git_repository_path = await getGitRootPath();
+    try {
+      const response = await axios.post(
+        "/api/git_undo_modify",
+        { git_path: git_repository_path, file_path: filePath },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      message.success("Undone Modification successfully");
+
+      // Fetch the file list again to update the UI.
+      fetchApi(path);
+    } catch (error) {
+      //console.log("깃 레포지토리 주소  " + git_repository_path);
+      //console.log("파일 path 주소  " + filePath);
+      console.error("Error undo Modification file:", error);
+      message.error("An error occurred while undone Modification the file");
+    }
+  }
+
+  async function gitRmCached(fileName: string) {
+    const filePath = `${path}/${fileName}`; // Construct the complete file path
+
+    const git_repository_path = await getGitRootPath();
+    try {
+      const response = await axios.post(
+        "/api/git_remove_cached",
+        { git_path: git_repository_path, file_path: filePath },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      message.success("File removed from index successfully");
+
+      // Fetch the file list again to update the UI.
+      fetchApi(path);
+    } catch (error) {
+      //console.log("깃 레포지토리 주소  " + git_repository_path);
+      //console.log("파일 path 주소  " + filePath);
+      console.error("Error removed file from index:", error);
+      message.error("An error occurred while removed the file from index");
+    }
+  }
+
+  async function gitRm(fileName: string) {
+    const filePath = `${path}/${fileName}`; // Construct the complete file path
+
+    const git_repository_path = await getGitRootPath();
+    try {
+      const response = await axios.post(
+        "/api/git_remove",
+        { git_path: git_repository_path, file_path: filePath },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      message.success("File removed successfully");
+
+      // Fetch the file list again to update the UI.
+      fetchApi(path);
+    } catch (error) {
+      //console.log("깃 레포지토리 주소  " + git_repository_path);
+      //console.log("파일 path 주소  " + filePath);
+      console.error("Error removed file:", error);
+      message.error("An error occurred while removed the file");
+    }
+  }
+
+  
 
 
   const columns: ColumnsType<FileTableDataType> = [
@@ -505,7 +517,7 @@ async function gitRm(fileName: string) {
           <NameWrapper onClick={() => {
             if (value.fileName === "..") {
               const newPath = path;
-              console.log(newPath);
+              //console.log(newPath);
               goBack();
             } else if (type_file === "folder") {
               const newPath = normalizePath(`${path}/${record.name.fileName}`);
@@ -626,7 +638,20 @@ async function gitRm(fileName: string) {
 
   return (
     <>
-    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+    <Breadcrumb>
+      <StyledBreadcrumbItem key="root" onClick={() => handleBreadcrumbClick('C:/')}>
+        <HomeOutlined />
+      </StyledBreadcrumbItem>
+      {pathStack.slice(1).map((path, index) => (
+        <StyledBreadcrumbItem key={index} onClick={() => handleBreadcrumbClick(path)}>
+          {path.split('/').pop()}
+        </StyledBreadcrumbItem>
+      ))}
+    </Breadcrumb>
+
+
+
       {checkGitTypes() && (
         <Button
           type="primary"

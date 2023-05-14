@@ -1,8 +1,6 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
-from fastapi import Query
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from urllib.parse import unquote
@@ -14,7 +12,6 @@ from typing import Optional
 import locale
 import datetime
 import logging
-import urllib.parse
 from collections import deque
 
 path_stack = deque()
@@ -144,7 +141,7 @@ async def get_files(path: str):
         return folders + files
     
     except Exception as e:
-        logging.error(f"Error occurred: {str(e)}")  # 로깅 레벨을 error로 설정
+        #logging.error(f"Error occurred: {str(e)}")  # 로깅 레벨을 error로 설정
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -172,13 +169,13 @@ class RepoPath(BaseModel):
 @app.post("/api/init_repo")
 async def init_repo(repo_path: RepoPath):
     path_str = repo_path.path
-    logging.info(f"INIT_PATH: {path_str}")
+    #logging.info(f"INIT_PATH: {path_str}")
 
     if path_str == "C:/":
         raise HTTPException(status_code=400, detail="Cannot initialize repository in root directory")
 
     try:
-        logging.info(f"try문 로깅: {path_str}")
+        #logging.info(f"try문 로깅: {path_str}")
         # Initialize the directory as a git repository
         repo = Repo.init(path_str)
         # Create an empty commit
@@ -401,7 +398,7 @@ async def git_commit(request: GitCommitRequest):
 @app.post("/api/get_staged_files")
 async def get_staged_files(repo_path: RepoPath):
     path_str = repo_path.path
-    logging.info(f"GET_STAGED_FILES_PATH: {path_str}")
+    #logging.info(f"GET_STAGED_FILES_PATH: {path_str}")
 
     try:
         repo = Repo(path_str)
