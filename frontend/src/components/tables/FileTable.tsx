@@ -117,14 +117,12 @@ async function fetchFiles(path: string) {
 export default function FileTable( { path, onPathChange }: FileTableProps) {
   const [tableHeight, setTableHeight] = useState<number>(0);
   const [fileList, setFileList] = useState<FileTableDataType[]>([]);
-
   const [isRenameModalVisible, setRenameModalVisible] = useState<boolean>(false);
   const [fileToRename, setFileToRename] = useState<NameType | null>(null);
   const [newName, setNewName] = useState<string>("");
-
   const [stagedFiles, setStagedFiles] = useState<FileTableDataType[]>([]);
+  const [stagedArea, setStagedArea] = useState<Record<string, FileTableDataType[]>>({});
   const [commitModalVisible, setCommitModalVisible] = useState<boolean>(false);
-
   const [pathStack, setPathStack] = useState<string[]>([path]);
 
 
@@ -273,7 +271,13 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       console.error("Error committing files:", error);
       message.error("An error occurred while committing the files");
     } finally {
-      // 모달을 닫습니다.
+      // 모달을 닫음.
+      // After committing, clear the staged area for the current path
+      setStagedArea(prev => ({
+        ...prev,
+        [path]: [],
+      }));
+
       setCommitModalVisible(false);
     }
   };
@@ -493,6 +497,27 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
       // Fetch the file list again to update the UI.
       fetchApi(path);
+
+      // Update stagedArea
+      setStagedArea(prev => ({
+        ...prev,
+        [git_repository_path]: [
+          ...(prev[git_repository_path] || []),
+          {
+            key: fileName, // Or whatever key you want to use
+            name: {
+              fileName: fileName,
+              type_file: "file", // Or whatever type the file has
+              type_git: "staged", // Since we just staged it
+            },
+            size: 0, // Or whatever size the file has
+            lastModified: new Date().toISOString(), // Or whatever modification date the file has
+            action: "staged", // Since we just staged it
+          }
+        ]
+      }));
+
+      getStagedFiles();
     } catch (error) {
       //console.log("깃 레포지토리 주소  " + git_repository_path);
       //console.log("파일 path 주소  " + filePath);
@@ -500,8 +525,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       message.error("An error occurred while removed the file");
     }
   }
-
-  
 
 
   const columns: ColumnsType<FileTableDataType> = [
@@ -739,6 +762,14 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
         {stagedFiles.map((file) => (
           <p key={file.key}>{file.name.fileName}</p>
         ))}
+
+        {stagedArea[path] && stagedArea[path].map((file) => (
+            <p key={file.key}>
+              {file.action === 'staged' && 'deleted:   '}
+              {file.name.fileName}
+            </p>
+          ))}
+
 
         <br />
 
