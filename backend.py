@@ -174,11 +174,14 @@ async def init_repo(repo_path: RepoPath):
     try:
         logging.info(f"try문 로깅: {path_str}")
         # Initialize the directory as a git repository
-        Repo.init(path_str)
+        repo = Repo.init(path_str)
+        # Create an empty commit
+        repo.index.commit("Initial commit") #Ref 'HEAD' did not resolve to an object 오류 해결
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "Repository initialized successfully"}
+
 
 
 # git_add

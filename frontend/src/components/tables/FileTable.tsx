@@ -196,7 +196,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const newPathStack = [...pathStack];
     setPathStack(newPathStack);
     const newPath = onPathChange(newPathStack[newPathStack.length - 1]);
-    console.log("시시발  " + newPath);
   
     path = newPath;
     axios.post("/api/init_repo", { path: newPath.toString() }, {
@@ -209,13 +208,13 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       if (response.data.message === "Repository initialized successfully") {
         message.success(response.data.message);
         console.log("Success!")
+        console.log(path);
         fetchApi(path); // fetch the fileList again to update the UI
       } else {
         message.error(response.data.error);
       }
     })
     .catch((error) => {
-      console.log("시발  " + path);
       console.error("Error initializing repository:", error);
       message.error("An error occurred while initializing the repository");
     });
