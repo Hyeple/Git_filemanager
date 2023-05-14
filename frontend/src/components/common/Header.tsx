@@ -26,22 +26,11 @@ interface HeaderProps {
 }
 
 export default function Header({ title = "File Manager" }: HeaderProps) {
-  const [mode, setMode] = useState<"light" | "dark">("light");
-
-  const icon = useMemo(() => {
-    switch (mode) {
-      case "light":
-        return <BulbOutlined />;
-      case "dark":
-        return <BulbFilled />;
-    }
-  }, [mode]);
 
   return (
     <StyledHeader>
       <InnerContainer>
         <Title>{title}</Title>
-        <Button icon={icon}>Switch Mode</Button>
       </InnerContainer>
     </StyledHeader>
   );
