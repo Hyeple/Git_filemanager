@@ -83,7 +83,7 @@ events {
 }
 
 http {
-    #you must change this include line
+    #**you must change this include line**
     include       C:/Users/hyzaa/Desktop/OSS/Git_filemanager/default.conf;
 
     #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
@@ -152,7 +152,7 @@ You need two powershell windows and one powershell which run as **administrator*
 (venv)~/projectdirectory  pip install gitpython
 ~/projectdirectory/frontend  npm install axios
 ~/projectdirectory/frontend  npm install --global serve
-~/projectdirectory/frontend  yarn
+~/projectdirectory/frontend  npm install
 ~/projectdirectory/frontend  npm run build
 ~/projectdirectory/frontend  serve -s build
 (venv)~/projectdirectory  uvicorn backend:app --host localhost --port 8000
