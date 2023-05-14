@@ -72,7 +72,10 @@ async def get_files(path: str):
 
         # Add a special folder item for going back
         go_back_item = FileItem(key=-1, name="..", file_type="folder", git_type="null", size=0, last_modified="")
-        folders.append(go_back_item)
+
+        # If the directory isn't the root directory, add the go_back_item
+        if directory != "C:\\":
+            folders.append(go_back_item)
 
         try:
             repo = Repo(directory, search_parent_directories=True)
