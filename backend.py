@@ -95,13 +95,12 @@ async def get_files(path: str):
                         full_path = os.path.relpath(entry.path, repo.working_tree_dir).replace("\\", "/")
 
                         #logging.info("{full_path}")
-
-                        if full_path in [d.a_path for d in diff_staged]:
+                        if full_path in repo.untracked_files:
+                            git_type = "untracked"
+                        elif full_path in [d.a_path for d in diff_staged]:
                             git_type = "staged"
                         elif full_path in [d.a_path for d in diff_index]:
                             git_type = "modified"
-                        elif full_path in repo.untracked_files:
-                            git_type = "untracked"
                         else:
                             git_type = "committed"
                             

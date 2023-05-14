@@ -279,6 +279,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       }));
 
       setCommitModalVisible(false);
+      setNewName("");
     }
   };
   
@@ -634,7 +635,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
               <ActionWrapper>
                 <Tooltip title=" Untracking file">
                   <Button icon={<DeleteOutlined />} onClick = {() => gitRmCached(record.name.fileName)} danger>
-                    Untrake
+                    Untrack
                   </Button>
                 </Tooltip>
   
