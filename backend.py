@@ -14,8 +14,6 @@ import datetime
 import logging
 from collections import deque
 
-path_stack = deque()
-
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
@@ -39,6 +37,19 @@ class FileItem(BaseModel):
     git_type: str
     size: float  # float으로 변경(int 숫자 범위)
     last_modified: str
+    path: str # file_path
+
+
+# FileItem inherit 클래스 만들기
+class GitItem(FileItem):
+    repoPath: str # git_path
+    newPath: str # after moving path
+    commitMsg: str # commit mesage
+    file_paths: list[str] # file_path_list
+    git_types : dict[str] # git_types_dict
+
+
+path_stack = deque() # path_stack 선언
 
 
 def sort_key(item: FileItem) -> str:
@@ -47,7 +58,7 @@ def sort_key(item: FileItem) -> str:
 
 
 @app.get("/api/root_files", response_model=List[FileItem])
-async def get_files(path: str):
+async def get_files(path: FileItem):
     path = unquote(path)
     path = os.path.normpath(path)
 
@@ -130,7 +141,7 @@ async def get_files(path: str):
                 last_modified = datetime.datetime.fromtimestamp(
                     entry.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
 
-                item = FileItem(key=key, name=entry.name, file_type=file_type,git_type=git_type, size=file_size, last_modified=last_modified)
+                item = FileItem(key=key, name=entry.name, file_type=file_type,git_type=git_type, size=file_size, last_modified=last_modified, path=path)
                 
                 if file_type == "folder":
                     folders.append(item)
@@ -144,12 +155,9 @@ async def get_files(path: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-class Path(BaseModel):
-    path: str
-
 # push path_stack
 @app.post("/api/push_path")
-async def push_path(path: Path):
+async def push_path(path: FileItem):
     path_stack.append(path.path)
     logging.info(f"Path_Stack: {path_stack}")   # path_stack에 push 잘 되나 출력.
     return {"message": "Path pushed successfully"}
@@ -162,39 +170,44 @@ async def reset_path_stack():
     return {"message": "Path stack reset successfully"}
 
 
-class RepoPath(BaseModel):
-    path: Optional[str] = None
-
+#git_init
 @app.post("/api/init_repo")
-async def init_repo(repo_path: RepoPath):
-    path_str = repo_path.path
+async def init_repo(request: GitItem):
+    path = request.path
+    git_types = request.git_types
+    git_type = request.git_type
+
     #logging.info(f"INIT_PATH: {path_str}")
 
-    if path_str == "C:/":
+    if path == "C:/":
         raise HTTPException(status_code=400, detail="Cannot initialize repository in root directory")
 
     try:
-        #logging.info(f"try문 로깅: {path_str}")
+        #logging.info(f"try문 로깅: {path}")
         # Initialize the directory as a git repository
-        repo = Repo.init(path_str)
+        repo = Repo.init(path)
         # Create an empty commit
         repo.index.commit("Initial commit") #Ref 'HEAD' did not resolve to an object 오류 해결
+        # 딕셔너리의 키 값으로 경로를 사용하는 방법
+        git_types[path] = git_type
+        # git_init 이후의 파일 상태는 untracked
+        git_type = "untracked"
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "Repository initialized successfully"}
 
 
-
 # git_add
-class GitAddRequest(BaseModel):
-    git_path: str
-    file_path: str
-
 @app.post("/api/git_add")
-async def git_add(request: GitAddRequest):
-    git_path = request.git_path
-    file_path = request.file_path
+async def git_add(request: GitItem):
+    git_path = request.repoPath
+    file_path = request.path
+    git_type = request.git_type
+    git_types = request.git_types
+
+    # 딕셔너리의 키 값으로 경로를 사용하는 방법
+    git_types[file_path] = git_type
 
     # Check if the path is a valid directory
     if not os.path.exists(git_path) or not os.path.isdir(git_path):
@@ -208,21 +221,26 @@ async def git_add(request: GitAddRequest):
     # Try to add the file
     try:
         repo.git.add(file_path)
+        # 딕셔너리의 키 값으로 경로를 사용하는 방법
+        git_types[file_path] = git_type
+        # git_add 하면 파일 상태는 staged
+        git_type = "staged"
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "File added successfully"}
 
 
-# git_restore_staged
-class GitRestoreRequest(BaseModel):
-    git_path: str
-    file_path: str
-
+# git_restore_staged (restore)
 @app.post("/api/git_restore_staged")
-async def git_restore(request: GitRestoreRequest):
-    git_path = request.git_path
-    file_path = request.file_path
+async def git_restore(request: GitItem):
+    git_path = request.repoPath
+    file_path = request.path
+    git_type = request.git_type
+    git_types = request.git_types
+
+    # 딕셔너리의 키 값으로 경로를 사용하는 방법
+    git_types[file_path] = git_type
 
     # Check if the path is a valid directory
     if not os.path.exists(git_path) or not os.path.isdir(git_path):
@@ -236,22 +254,23 @@ async def git_restore(request: GitRestoreRequest):
     # Try to restore the file
     try:
         repo.git.restore("--staged", file_path)
+        # 딕셔너리의 키 값으로 경로를 사용하는 방법
+        git_types[file_path] = git_type
+        # unstage 된 파일의 상태는 modified
+        git_type = "modified"
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "File restored successfully"}
 
 
-
-#git_undomodify
-class GitUndoModifyRequest(BaseModel):
-    git_path: str
-    file_path: str
-
+#git_undo_modify (restore)
 @app.post("/api/git_undo_modify")
-async def git_undo_modify(request: GitUndoModifyRequest):
-    git_path = request.git_path
-    file_path = request.file_path
+async def git_undo_modify(request: GitItem):
+    git_path = request.repoPath
+    file_path = request.path
+    git_type = request.git_type
+    git_types = request.git_types
 
     # Check if the path is a valid directory
     if not os.path.exists(git_path) or not os.path.isdir(git_path):
@@ -259,27 +278,30 @@ async def git_undo_modify(request: GitUndoModifyRequest):
 
     try:
         repo = Repo(git_path)
+
     except InvalidGitRepositoryError:
         raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
 
     # Try to undo the modification
     try:
         repo.git.restore(file_path)
+        # 딕셔너리의 키 값으로 경로를 사용하는 방법
+        git_types[file_path] = git_type
+        # git_undo_modify 이후 파일의 상태는 수정하기 이전의 상태
+        git_type = git_types.get(file_path, "")
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+    # git_type = git_types.get(file_path, "")
 
     return {"message": "Undone Modification successfully"}
 
 
-class GitUntrackRequest(BaseModel):
-    git_path: str
-    file_path: str
-
-#git_rm --cached
+#git_rm --cached (untrack)
 @app.post("/api/git_remove_cached")
-async def git_remove(request: GitUntrackRequest):
-    git_path = request.git_path
-    file_path = request.file_path
+async def git_remove(request: GitItem):
+    git_path = request.repoPath
+    file_path = request.path
 
     # Check if the path is a valid directory
     if not os.path.exists(git_path) or not os.path.isdir(git_path):
@@ -299,15 +321,11 @@ async def git_remove(request: GitUntrackRequest):
     return {"message": "File removed from index successfully"}
 
 
-class GitRemoveRequest(BaseModel):
-    git_path: str
-    file_path: str
-
 #git_rm
 @app.post("/api/git_remove")
-async def git_remove(request: GitRemoveRequest):
-    git_path = request.git_path
-    file_path = request.file_path
+async def git_remove(request: GitItem):
+    git_path = request.repoPath
+    file_path = request.path
 
     # Check if the path is a valid directory
     if not os.path.exists(git_path) or not os.path.isdir(git_path):
@@ -329,16 +347,13 @@ async def git_remove(request: GitRemoveRequest):
 
 
 #git_mv
-class GitRenameRequest(BaseModel):
-    git_path: str
-    old_file_path: str
-    new_file_path: str
-
 @app.post("/api/git_move")
-async def git_rename(request: GitRenameRequest):
-    git_path = request.git_path
-    old_file_path = request.old_file_path
-    new_file_path = request.new_file_path
+async def git_rename(request: GitItem):
+    git_path = request.repoPath
+    old_file_path = request.path
+    new_file_path = request.newPath
+    git_type = request.git_type
+    git_types = request.git_types
 
     # Check if the path is a valid directory
     if not os.path.exists(git_path) or not os.path.isdir(git_path):
@@ -359,16 +374,13 @@ async def git_rename(request: GitRenameRequest):
 
 
 #git_commit
-class GitCommitRequest(BaseModel):  
-    git_path: str
-    commit_message: str
-    file_paths: list[str]
-
 @app.post("/api/git_commit")
-async def git_commit(request: GitCommitRequest):
-    git_path = request.git_path
-    commit_message = request.commit_message
+async def git_commit(request: GitItem):
+    git_path = request.repoPath
+    commit_message = request.commitMsg
     file_paths = request.file_paths
+    git_type = request.git_type
+    git_types = request.git_types
 
     # Check if the path is a valid directory
     if not os.path.exists(git_path) or not os.path.isdir(git_path):
@@ -386,6 +398,9 @@ async def git_commit(request: GitCommitRequest):
             repo.git.add(file_path)
         except GitCommandError as e:
             raise HTTPException(status_code=500, detail=str(e))
+        
+    # 딕셔너리의 키 값으로 경로를 사용하는 방법
+    git_types[file_path] = git_type
 
     # Commit changes
     try:
@@ -397,7 +412,7 @@ async def git_commit(request: GitCommitRequest):
 
 
 @app.post("/api/get_staged_files")
-async def get_staged_files(repo_path: RepoPath):
+async def get_staged_files(repo_path: GitItem):
     path_str = repo_path.path
     #logging.info(f"GET_STAGED_FILES_PATH: {path_str}")
 
@@ -427,11 +442,8 @@ async def get_staged_files(repo_path: RepoPath):
     return {"message": "Staged files fetched successfully"}
 
 
-class GitRootPath(BaseModel):
-    path: str
-
 @app.post("/api/git_root_path")
-async def get_git_root_path(item: GitRootPath):
+async def get_git_root_path(item: GitItem):
     try:
         repo = Repo(item.path, search_parent_directories=True)
         git_root_path = repo.git.rev_parse("--show-toplevel")
