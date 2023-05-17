@@ -34,10 +34,13 @@ class FileItem(BaseModel):
     key: int
     name: str
     file_type: str
+    git_types : dict[str] # git_types_dict
     git_type: str
     size: float  # float으로 변경(int 숫자 범위)
     last_modified: str
     path: str # file_path
+
+    git_types[path] = git_type
 
 
 # FileItem inherit 클래스 만들기
@@ -46,7 +49,6 @@ class GitItem(FileItem):
     newPath: str # after moving path
     commitMsg: str # commit mesage
     file_paths: list[str] # file_path_list
-    git_types : dict[str] # git_types_dict
 
 
 path_stack = deque() # path_stack 선언
@@ -205,9 +207,6 @@ async def git_add(request: GitItem):
     file_path = request.path
     git_type = request.git_type
     git_types = request.git_types
-
-    # 딕셔너리의 키 값으로 경로를 사용하는 방법
-    git_types[file_path] = git_type
 
     # Check if the path is a valid directory
     if not os.path.exists(git_path) or not os.path.isdir(git_path):
