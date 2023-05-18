@@ -25,7 +25,9 @@ https://harrybark.tistory.com/8
   ```bash
   choco -nginx
  ```
+
  or
+ 
   ```bash
   choco install nginx
  ```
