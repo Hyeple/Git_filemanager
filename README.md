@@ -23,7 +23,11 @@ https://harrybark.tistory.com/8
 ### [nginx - Installation method]
   You must run this command in the cmd window with **administrator**
   ```bash
-  choco nginx
+  choco -nginx
+ ```
+ or
+  ```bash
+  choco install nginx
  ```
  
  ## libraries
