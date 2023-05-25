@@ -612,3 +612,38 @@ async def branch_checkout(request: BranchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "Branch checkouted successfully"}
+
+
+
+# merge API from here
+@app.post("/api/branch_merge")
+async def branch_merge(request: BranchRequest):
+    git_path = request.git_path
+    branch_name = request.branch_name   # target
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+
+    # Check if there are uncommitted changes
+    if repo.is_dirty():
+        raise HTTPException(status_code=400, detail="Uncommitted changes exist")
+
+    # Try to merge
+    try:
+        repo.git.merge(branch_name)
+    except GitCommandError:       
+        unmerged_paths = []
+        for entry in repo.index.entries.values():
+        # add file name that has conflicts
+            if entry.stage != 0 and entry.path not in unmerged_paths:
+                unmerged_paths.append(entry.path)    
+        repo.git.merge("--abort")
+        raise HTTPException(status_code=500, detail="Merge failed", headers=unmerged_paths)    
+
+    return {"message": "Branch merged successfully"}
