@@ -581,3 +581,34 @@ async def branch_rename(request: BranchRenameRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "Branch renamed successfully"}
+
+
+@app.post("/api/branch_checkout")
+async def branch_checkout(request: BranchRequest):
+    git_path = request.git_path
+    branch_name = request.branch_name
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+    
+    # Check if the branch already exists
+    if not any(branch_name == branch.name for branch in repo.branches):
+        raise HTTPException(status_code=400, detail="Branch doesn't exists")
+    
+    #check if the branch is current branch
+    if branch_name == repo.active_branch.name:
+        raise HTTPException(status_code=400, detail=f"Already on {branch_name}")
+
+    # Try to checkout branch
+    try:
+        repo.git.checkout(branch_name)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "Branch checkouted successfully"}
