@@ -486,3 +486,34 @@ async def get_branches(request: BranchGetRequest):
         return {"branches": branches} 
     else:
         raise HTTPException(status_code=400, detail="Branch already exists")
+    
+
+class BranchRequest(BaseModel):  
+    git_path: str
+    branch_name: str
+
+@app.post("/api/branch_create")
+async def branch_create(request: BranchRequest):
+    git_path = request.git_path
+    branch_name = request.branch_name
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+    
+    # Check if the branch already exists
+    if any(branch_name == branch.name for branch in repo.branches):
+        raise HTTPException(status_code=400, detail="Branch already exists")
+
+    # Try to create new branch
+    try:
+        repo.create_head(branch_name)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "Branch created successfully"}
