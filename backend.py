@@ -459,3 +459,30 @@ async def catch_all(path: str):
 @app.get("/")
 async def read_root():
     return FileResponse("frontend/build/index.html")
+
+
+
+# branch API from here
+
+class BranchGetRequest(BaseModel):
+    git_path: str
+
+@app.get("/api/branches")
+async def get_branches(request: BranchGetRequest):
+    git_path = request.git_path
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+    
+    branches = [branch.name for branch in repo.branches]
+    
+    if branches:
+        return {"branches": branches} 
+    else:
+        raise HTTPException(status_code=400, detail="Branch already exists")
