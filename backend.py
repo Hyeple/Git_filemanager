@@ -552,7 +552,7 @@ class BranchRenameRequest(BaseModel):
     new_name: str
 
 @app.post("/api/branch_rename")
-async def branch_delete(request: BranchRenameRequest):
+async def branch_rename(request: BranchRenameRequest):
     git_path = request.git_path
     old_name = request.old_name
     new_name = request.new_name
