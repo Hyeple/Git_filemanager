@@ -50,6 +50,7 @@ class GitItem(FileItem):
     commitMsg: str # commit mesage
     file_paths: list[str] # file_path_list
     branch_name: str # heading branch name
+    commit_checksum: str # commit checksum string
 
 
 path_stack = deque() # path_stack 선언
@@ -487,9 +488,9 @@ async def get_git_history(request: GitItem):
                 'parent_checksums': [parent.hexsha for parent in commit.parents],
                 'commit_message': commit.message, 
                 'branches': branch_names,
-                'author': commit.committer.name, # string type
-                'date': datetime.datetime.fromtimestamp(
-                    commit.committed_datetime).strftime("%Y-%m-%d %H:%M:%S")
+                'author': commit.author.name, # string type
+                #'date': datetime.datetime.fromtimestamp(
+                #    commit.authored_datetime).strftime("%Y-%m-%d %H:%M:%S")
             }
             history_list.apeend(commit_info)
         
@@ -520,3 +521,30 @@ async def get_git_history(request: GitItem):
 # basic history list has commits in order of creation time
 # each commits have basic information for drawing history tree
 # > checksum / parent's checksums / branches / author.name / commit date
+
+
+@app.get("/api/commit_information")
+async def get_commit_information(request:GitItem):
+    git_path = request.repoPath
+
+    try:
+        repo = Repo(git_path)
+
+        try:
+            commit = repo.commit(request.commit_checksum)
+        except:
+            raise HTTPException(status_code=404, detail="Commit not found")
+        
+        commit_info = {
+            'commit_checksum': commit.hexsha,
+            'parent_checksums': [parent.hexsha for parent in commit.parents],
+            'author': commit.author.name,
+            'commiter': commit.committer.name,
+            'date': datetime.datetime.fromtimestamp(
+                commit.authored_datetime).strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        return commit_info
+    
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
