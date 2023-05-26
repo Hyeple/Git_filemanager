@@ -49,6 +49,7 @@ class GitItem(FileItem):
     newPath: str # after moving path
     commitMsg: str # commit mesage
     file_paths: list[str] # file_path_list
+    branch_name: str # heading branch name
 
 
 path_stack = deque() # path_stack 선언
@@ -459,3 +460,63 @@ async def catch_all(path: str):
 @app.get("/")
 async def read_root():
     return FileResponse("frontend/build/index.html")
+
+
+# for Feature_3
+
+@app.get("api/git_history")
+async def get_git_history(request: GitItem):
+    git_path = request.repoPath
+    # branch_name = request.branch_name ( if sorting by selected branch for graph )
+
+    try:
+        repo = Repo(git_path)
+
+        # all branch & creation time
+        commits = list(repo.iter_commits())
+
+        history_list = []
+
+        for commit in commits:
+
+            branch_names = [branch.name for branch in repo.branches if commit in repo.iter_commits(branch)]
+            
+            # we may need more information about commit for making history tree
+            commit_info = {
+                'commit_checksum': commit.hexsha, # string type
+                'parent_checksums': [parent.hexsha for parent in commit.parents],
+                'commit_message': commit.message, 
+                'branches': branch_names,
+                'author': commit.committer.name, # string type
+                'date': datetime.datetime.fromtimestamp(
+                    commit.committed_datetime).strftime("%Y-%m-%d %H:%M:%S")
+            }
+            history_list.apeend(commit_info)
+        
+        return history_list
+    
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# git_history will get git_root_path
+
+# repo.iter_commits() : all commit travels and get commit
+# > travel commits in order of creation date
+# repo.iter_commits('branch_name') : travel commits in branch_name
+
+# Commit object has these informations
+# hexsha : commit checksum
+# message : commit message
+# author : commit author ( Actor object : name & e-mail )
+# committed_date : commit date ( unix timestamp )
+# parents : parent commits => Commit object list
+# tree : tree of commit ( Tree object )
+
+# about commit.parents ( usually commits have one parents but in merge.. )
+# if the commit created by merge.. first: mainline , second..: merged last commit
+
+# basic history list has commits in order of creation time
+# each commits have basic information for drawing history tree
+# > checksum / parent's checksums / branches / author.name / commit date
