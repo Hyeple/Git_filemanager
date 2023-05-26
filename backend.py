@@ -552,6 +552,59 @@ async def get_commit_information(request:GitItem):
 # this api does not have changed data for files
 
 
+@app.get("/api/changed_files")
+def get_changed_files(request: GitItem):
+    git_path = request.repoPath
+
+    try:
+        repo = Repo(git_path)
+
+        try:
+            commit = repo.commit(request.commit_checksum)
+        except:
+            raise HTTPException(status_code=404, detail="Commit not found")
+        
+        changed_files = []
+
+        if commit.parents:
+            diff_index = commit.parents[0].diff(commit)
+        else:
+            diff_index = commit.diff(NULL_TREE)
+        
+        # it recognize type only A / D / M
+        for diff in diff_index:
+            if diff.change_type == 'A':
+                changed_files.append({
+                    "file_name": os.path.basename(diff.b_path),
+                    "change_type": "added"
+                })
+            elif diff.change_type == 'D':
+                changed_files.append({
+                    "file_name": os.path.basename(diff.a_path),
+                    "change_type": "deleted"
+                })
+            elif diff.change_type == 'M':
+                changed_files.append({
+                    "file_name": os.path.basename(diff.a_path),
+                    "change_type": "modified"
+                })
+
+        return changed_files
+    
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# this api recognize files in type added / removed / modified
+# but we can think the file type renamed ( copy ? )
+
+# changed files have elements > ('file_name', 'change_type')
+
+# this api also only recognize mainline branch
+# but we can choose branch and parameter branch or parent checksum
+# if get branch > branch and parent checksum matching 
+# if get parent checksum > if not initial commit, we can replace it
+
+
 @app.get("/api/changed_data")
 def get_changed_data(request: GitItem):
     git_path = request.repoPath
@@ -566,7 +619,7 @@ def get_changed_data(request: GitItem):
             raise HTTPException(status_code=404, detail="Commit not found")
         
         if commit.parents:
-            diff_index = commit.parents[0].diff(commit)
+             diff_index = commit.parents[0].diff(commit)
         else:
             diff_index = commit.diff(NULL_TREE)
         
@@ -600,3 +653,12 @@ def get_changed_data(request: GitItem):
 # change_type: 'A' : add & 'D' : remove & 'M' : modified & 'R' : renamed & 'C' : copy
 # line changes : before changes > removed_lines & after changes > added_lines
 # add_lines and removed_lines are list for change strings
+
+# this api show information based on main line branch
+# so, if you see changed information based on merged branch
+# > we can change diff_index = commit.parents[0].diff(commit)
+# > to diff_index = commit.parents[1 or 2 ...].diff(commit)
+
+# this case, parameter need commit_checksum > checksum == commit.parents[0] or not
+
+# we must have more error handling codes
