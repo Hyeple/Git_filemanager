@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from urllib.parse import unquote
 from typing import List
 from pydantic import BaseModel
-from git import Repo, GitCommandError, InvalidGitRepositoryError
+from git import Repo, GitCommandError, InvalidGitRepositoryError, NULL_TREE
 import os 
 from typing import Optional
 import locale
@@ -499,8 +499,6 @@ async def get_git_history(request: GitItem):
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-
 # git_history will get git_root_path
 
 # repo.iter_commits() : all commit travels and get commit
@@ -520,7 +518,7 @@ async def get_git_history(request: GitItem):
 
 # basic history list has commits in order of creation time
 # each commits have basic information for drawing history tree
-# > checksum / parent's checksums / branches / author.name / commit date
+# > checksum / parent's checksums / branches / author.name / (commit date)
 
 
 @app.get("/api/commit_information")
@@ -548,3 +546,57 @@ async def get_commit_information(request:GitItem):
     
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+# commit's detail informaion
+# > commit checksum / parent_checksums / author / commiter / date
+# this api does not have changed data for files
+
+
+@app.get("/api/changed_data")
+def get_changed_data(request: GitItem):
+    git_path = request.repoPath
+    file_path = request.path
+
+    try:
+        repo = Repo(git_path)
+
+        try:
+            commit = repo.commit(request.commit_checksum)
+        except:
+            raise HTTPException(status_code=404, detail="Commit not found")
+        
+        if commit.parents:
+            diff_index = commit.parents[0].diff(commit)
+        else:
+            diff_index = commit.diff(NULL_TREE)
+        
+        diff_info = []
+
+        # get path about git root repository
+        path = os.path.relpath(file_path, repo.working_tree_dir).replace("\\", "/")
+        for diff in diff_index:
+            if diff.a_path == path or diff.b_path == path:
+                diff_info.append({
+                    'change_type': diff.change_type,
+                    "added_lines": diff.b_blob.data_stream.read().decode().split("\n") if diff.b_blob is not None else [],
+                    "removed_lines": diff.a_blob.data_stream.read().decode().split("\n") if diff.a_blob is not None else [],
+                })
+        
+        if not diff_info:
+            raise HTTPException(status_code=404, detail="File not found in the commit")
+        
+        return diff_info
+    
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# parameter : repoPath and filePath
+
+# commit.diff(NULL_TREE) is for first commit >> all codes are changes
+# first commit : a_path == None
+
+# a_path : file path for parent commit & b_path : file path for current commit
+
+# change_type: 'A' : add & 'D' : remove & 'M' : modified & 'R' : renamed & 'C' : copy
+# line changes : before changes > removed_lines & after changes > added_lines
+# add_lines and removed_lines are list for change strings
