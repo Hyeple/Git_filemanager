@@ -49,6 +49,7 @@ class GitItem(FileItem):
     newPath: str # after moving path
     commitMsg: str # commit mesage
     file_paths: list[str] # file_path_list
+    https: str # cloning https
 
 
 path_stack = deque() # path_stack 선언
@@ -459,3 +460,23 @@ async def catch_all(path: str):
 @app.get("/")
 async def read_root():
     return FileResponse("frontend/build/index.html")
+
+
+# Feature 4
+
+@app.post("/api/public_clone")
+async def public_clone(request: GitItem):
+    path = request.path
+    clone_link = request.https
+
+    try:
+        Repo.clone_from(clone_link, path)
+
+        return {"message": "Clone Successfully"}
+    
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# Repo.clone(url, path)
+# > clone in url to path
+
