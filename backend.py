@@ -51,7 +51,7 @@ class GitItem(FileItem):
     file_paths: list[str] # file_path_list
     https: str # cloning https
     username: str # username for private clone
-    password: str # password for private clone
+    access_token: str # token for private clone
 
 
 path_stack = deque() # path_stack 선언
@@ -488,13 +488,14 @@ async def private_clone(request: GitItem):
     path = request.path
     clone_link = request.https
     username = request.username
-    password = request.password
-
-    clone_link = clone_link.replace('https://', f'https://{username}:{password}@')
+    access_token = request.access_token
 
     try:
-        Repo.clone_from(clone_link, path)
+        Repo.clone_from(clone_link, path, env = {"GIT_ASKPASS": access_token})
 
         return {"message": "Clone Successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+# for private clone
+# basic https >> need id and Access token
