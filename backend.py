@@ -12,6 +12,7 @@ from typing import Optional
 import locale
 import datetime
 import logging
+import requests
 from collections import deque
 
 logging.basicConfig(level=logging.INFO)
@@ -483,6 +484,37 @@ async def public_clone(request: GitItem):
 # > clone in url to path
 
 
+@app.get("/api/repo_status")
+async def get_repo_status(request: GitItem):
+    clone_link = request.https
+    access_token = request.access_token
+
+    headers = {
+        'Authorization': f'token {access_token}',
+    }
+
+    try:
+        response = requests.get(clone_link, headers = headers)
+
+        if response.status_code == 200:
+            return {'public': response.json()["private"] == False}
+        elif response.status_code == 404:
+            return {'error': 'Repository does not exist or not access have'}
+        else:
+            return {'error': 'Error occured'}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# for this api, we need to import requests >> install
+
+# to access git repository and get private or public,
+# this api need access_token early
+
+# if repo is public, 'public': 'True' / if repo is private, 'public': 'False'
+# if repo does not exist or does not have access : status_code == 404
+
+
 @app.post("/api/private_clone")
 async def private_clone(request: GitItem):
     path = request.path
@@ -491,7 +523,10 @@ async def private_clone(request: GitItem):
     access_token = request.access_token
 
     try:
-        Repo.clone_from(clone_link, path, env = {"GIT_ASKPASS": access_token})
+        os.environ['GIT_ASKPASS'] = 'echo'
+        os.environ['TOKEN'] = access_token
+
+        Repo.clone_from(clone_link, path)
 
         return {"message": "Clone Successfully"}
     except Exception as e:
