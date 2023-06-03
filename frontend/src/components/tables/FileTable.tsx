@@ -1023,12 +1023,14 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
     <br/>
       
-      <Button
+    {!checkGitTypes() && (<Button
         onClick={openBranchModal}
         style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
       >
         <HistoryOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> git commit history
-      </Button>
+      </Button>)}
+
+      <br/>
 
       <Table
         columns={columns}
