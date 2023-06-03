@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Modal, Button, Table, Tooltip, Input, message, Breadcrumb } from "antd";
-import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined, CheckOutlined, SendOutlined } from "@ant-design/icons";
+import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined, CheckOutlined, SendOutlined, MergeCellsOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
@@ -935,7 +935,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
               </Button>
             )}
             {renameBranchMode !== name && (
-              <Button onClick={() => setRenameBranchMode(name)}>
+              <Button  style={{ marginRight: '5px' }} onClick={() => setRenameBranchMode(name)}>
                 <EditOutlined />
               </Button>
             )}
@@ -949,7 +949,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
                   fetchActiveBranch();
                 }}
               >
-                Merge
+                <MergeCellsOutlined />
               </Button>
             )}
           </div>
