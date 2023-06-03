@@ -12,6 +12,7 @@ from typing import Optional
 import locale
 import datetime
 import logging
+import requests
 from collections import deque
 
 path_stack = deque()
@@ -33,7 +34,6 @@ app.add_middleware(
 app.mount("/frontend/static", StaticFiles(directory="frontend/build/static"), name="static")
 
 class FileItem(BaseModel):
-<<<<<<< HEAD
     key: Optional[int] = None
     name: Optional[str] = None
     file_type: Optional[str] = None
@@ -47,32 +47,14 @@ class FileItem(BaseModel):
     new_file_path : Optional[str] = None
     commit_message: Optional[str] = None
     file_paths: Optional[list[str]] = None
-    
-=======
-    key: int
-    name: str
-    file_type: str
-    git_types : dict[str] # git_types_dict
-    git_type: str
-    size: float  # float으로 변경(int 숫자 범위)
-    last_modified: str
-    path: str # file_path
 
-    git_types[path] = git_type
-
-
-# FileItem inherit 클래스 만들기
-class GitItem(FileItem):
-    repoPath: str # git_path
-    newPath: str # after moving path
-    commitMsg: str # commit mesage
-    file_paths: list[str] # file_path_list
-    branch_name: str # heading branch name
-    commit_checksum: str # commit checksum string
+    https: str # cloning https
+    username: str # username for private clone
+    access_token: str # token for private clone
 
 
 path_stack = deque() # path_stack 선언
->>>>>>> feature3_api
+
 
 
 def sort_key(item: FileItem) -> str:
@@ -443,8 +425,6 @@ async def read_root():
     return FileResponse("frontend/build/index.html")
 
 
-<<<<<<< HEAD
-
 # branch API from here
 
 class BranchGetRequest(BaseModel):
@@ -630,7 +610,7 @@ async def branch_merge(request: BranchRequest):
         raise HTTPException(status_code=500, detail="Merge failed", headers=unmerged_paths)    
 
     return {"message": "Branch merged successfully"}
-=======
+
 # for Feature_3
 
 @app.get("api/git_history")
@@ -711,10 +691,23 @@ async def get_commit_information(request:GitItem):
         }
 
         return commit_info
+
+# Feature 4
+
+@app.post("/api/public_clone")
+async def public_clone(request: GitItem):
+    path = request.path
+    clone_link = request.https
+
+    try:
+        Repo.clone_from(clone_link, path)
+
+        return {"message": "Clone Successfully"}
+
     
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 # commit's detail informaion
 # > commit checksum / parent_checksums / author / commiter / date
 # this api does not have changed data for files
@@ -830,4 +823,58 @@ def get_changed_data(request: GitItem):
 # this case, parameter need commit_checksum > checksum == commit.parents[0] or not
 
 # we must have more error handling codes
->>>>>>> feature3_api
+
+# Repo.clone(url, path)
+# > clone in url to path
+
+
+@app.get("/api/repo_status")
+async def get_repo_status(request: GitItem):
+    clone_link = request.https
+    access_token = request.access_token
+
+    headers = {
+        'Authorization': f'token {access_token}',
+    }
+
+    try:
+        response = requests.get(clone_link, headers = headers)
+
+        if response.status_code == 200:
+            return {'public': response.json()["private"] == False}
+        elif response.status_code == 404:
+            return {'error': 'Repository does not exist or not access have'}
+        else:
+            return {'error': 'Error occured'}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# for this api, we need to import requests >> install
+
+# to access git repository and get private or public,
+# this api need access_token early
+
+# if repo is public, 'public': 'True' / if repo is private, 'public': 'False'
+# if repo does not exist or does not have access : status_code == 404
+
+
+@app.post("/api/private_clone")
+async def private_clone(request: GitItem):
+    path = request.path
+    clone_link = request.https
+    username = request.username
+    access_token = request.access_token
+
+    try:
+        os.environ['GIT_ASKPASS'] = 'echo'
+        os.environ['TOKEN'] = access_token
+
+        Repo.clone_from(clone_link, path)
+
+        return {"message": "Clone Successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# for private clone
+# basic https >> need id and Access token
