@@ -242,8 +242,6 @@ async def git_restore(request: FileItem):
 
     return {"message": "File restored successfully"}
 
-
-
 #git_undomodify
 @app.post("/api/git_undo_modify")
 async def git_undo_modify(request: FileItem):
@@ -341,7 +339,6 @@ async def git_rename(request: FileItem):
 
     return {"message": "File renamed successfully"}
 
-
 #git_commit
 @app.post("/api/git_commit")
 async def git_commit(request: FileItem):
@@ -378,7 +375,7 @@ async def git_commit(request: FileItem):
 @app.post("/api/get_staged_files")
 async def get_staged_files(repo_path: FileItem):
     path_str = repo_path.path
-    #logging.info(f"GET_STAGED_FILES_PATH: {path_str}")
+    logging.info(f"GET_STAGED_FILES_PATH: {path_str}")
 
     try:
         repo = Repo(path_str)
@@ -415,7 +412,6 @@ async def get_git_root_path(item: FileItem):
     except InvalidGitRepositoryError:
         raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
 
-
 @app.get("/{path:path}", include_in_schema=False)
 async def catch_all(path: str):
     return FileResponse("frontend/build/index.html")
@@ -427,6 +423,26 @@ async def read_root():
 
 
 # feature 1 : create, checkout, delete, rename
+@app.post("/api/branche_get")
+async def get_branches(request: FileItem):
+    git_path = request.git_path
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        # open git repo
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+    
+    # Retrieve all branch names
+    branch_names = [branch.name for branch in repo.branches]
+
+    return branch_names
+
+
 @app.post("/api/branch_create")
 async def branch_create(request: FileItem):
     git_path = request.git_path
@@ -548,6 +564,7 @@ async def branch_checkout(request: FileItem):
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "Branch checkouted successfully"}
+
 
 
 # feature 2 : branch merge
@@ -757,6 +774,21 @@ async def clone_and_check_status(request: FileItem):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# Repo.clone(url, path)
+    # Repo.clone(url, path)
 # > clone in url to path
+    
+
+@app.get("/repo/{user}/{repo}")
+async def read_repo(user: str, repo: str):
+    url = f"https://api.github.com/repos/{user}/{repo}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        data = response.json()
+        if data['private'] is True:
+            return {"message": "This repository is private."}
+        else:
+            return {"message": "This repository is public."}
+    else:
+        raise HTTPException(status_code=404, detail="Repository not found")
+

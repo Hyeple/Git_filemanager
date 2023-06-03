@@ -113,7 +113,6 @@ async function fetchFiles(path: string) {
   }
 }
 
-
 export default function FileTable( { path, onPathChange }: FileTableProps) {
   const [tableHeight, setTableHeight] = useState<number>(0);
   const [fileList, setFileList] = useState<FileTableDataType[]>([]);
@@ -124,6 +123,144 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   const [stagedArea, setStagedArea] = useState<Record<string, FileTableDataType[]>>({});
   const [commitModalVisible, setCommitModalVisible] = useState<boolean>(false);
   const [pathStack, setPathStack] = useState<string[]>([path]);
+
+  const columns: ColumnsType<FileTableDataType> = [
+    {
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
+      render: (value: NameType, record: FileTableDataType) => {
+        if (!value) {
+          return "";
+        }
+        const { fileName, type_file, type_git } = value;
+        const normalizePath = (parts: string) => parts.replace(/\/+/g, '/');
+
+        return (
+          <NameWrapper onClick={() => {
+            if (value.fileName === "..") {
+              const newPath = path;
+              //console.log(newPath);
+              goBack();
+            } else if (type_file === "folder") {
+              const newPath = normalizePath(`${path}/${record.name.fileName}`);
+              if (!pathStack.includes(newPath)) {
+                const newPathStack = [...pathStack, newPath];
+                setPathStack(newPathStack);
+                onPathChange(newPath);
+              }
+            }
+          }}>
+            {getFileIcon(type_file, type_git)}
+            {fileName}
+          </NameWrapper>
+        );
+      },
+    },
+    {
+      title: "Size",
+      dataIndex: "size",
+      key: "size",
+      render: (value) => {
+        if (!value) {
+          return "-";
+        }
+  
+        return getFileSize(value);
+      },
+    },
+    {
+      title: "Modified Date",
+      dataIndex: "lastModified",
+      key: "lastModified",
+    },
+    {
+      title: "Git Action",
+      dataIndex: "action",
+      key: "action",
+      render: (value: GitType, record : FileTableDataType) => {
+        if (!value) {
+          return "";
+        }
+  
+        switch (value) {
+          case "untracked":
+            if (record.name.type_file !== "file"){
+              return "";
+            }
+
+            return (
+              <Tooltip title="Adding the file into a staging area">
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => gitAdd(record.name.fileName)}>
+                  Add
+                </Button>
+              </Tooltip>
+          );
+          
+          case "modified":
+            return (
+              <ActionWrapper>
+                <Tooltip title="Adding the file into a staging area">
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => gitAdd(record.name.fileName)}>
+                    Add
+                  </Button>
+                </Tooltip>
+          
+                <Tooltip title="Undoing the modification">
+                  <Button icon={<RedoOutlined />} onClick = {() => gitUndoModify(record.name.fileName)}>
+                    Restore
+                  </Button>
+                </Tooltip>
+              </ActionWrapper>
+          );
+          
+  
+          case "staged":
+            return (
+              <ActionWrapper>
+                <Tooltip title="Unstaging changes">
+                  <Button icon={<RedoOutlined />} onClick = {() => gitRestore(record.name.fileName)}>
+                    Restore
+                  </Button>
+                </Tooltip>
+              </ActionWrapper>
+            );
+  
+          case "committed":
+            return (
+              <ActionWrapper>
+                <Tooltip title=" Untracking file">
+                  <Button icon={<DeleteOutlined />} onClick = {() => gitRmCached(record.name.fileName)} danger>
+                    Untrack
+                  </Button>
+                </Tooltip>
+  
+                <Tooltip title="Deleting file">
+                  <Button type="primary" icon={<DeleteOutlined />} onClick = {() => gitRm(record.name.fileName)} danger>
+                    Delete
+                  </Button>
+                </Tooltip>
+                
+                <Tooltip title="Renaming file">
+                  <Button icon={<EditOutlined />} onClick={() => handleRenameClick(record)}>
+                    Rename
+                  </Button>
+                </Tooltip>
+              </ActionWrapper>
+            );
+
+          case "null" :
+            return "";
+
+          case "back" :
+            return "";
+
+          case "tracked" :
+            return "";
+        }
+      },
+    },
+  ];
 
 
   const handleRenameClick = (record: FileTableDataType) => {
@@ -207,7 +344,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     return fileList.every((file) => file.name.type_git === 'null');
   }, [fileList]);
   
-
   // git_init
   const initRepo = () => {
     const newPathStack = [...pathStack];
@@ -240,7 +376,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       }
     });
   };
-  
+
   const handleCommit = async () => {
     try {
       const gitRootPath = await getGitRootPath();
@@ -528,183 +664,182 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   }
 
 
-  const columns: ColumnsType<FileTableDataType> = [
+  //PROJ2_START
+
+  const [isCloneModalVisible, setCloneModalVisible] = useState(false);
+  const [repoUrl, setRepoUrl] = useState("");
+  
+  const openCloneModal = () => {
+    setCloneModalVisible(true);
+  };
+  
+  const closeCloneModal = () => {
+    setCloneModalVisible(false);
+  };
+  
+  const handleRepoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRepoUrl(e.target.value);
+  };
+
+  
+  const getRepoDetails = (repoUrl : string) => {
+    // Assume the URL is of the form "https://github.com/{user}/{repo}"
+    const parts = repoUrl.split('/');
+    return {
+      user: parts[parts.length - 2],
+      repo: parts[parts.length - 1]
+    };
+  };
+
+  const handleCloneRepo = async () => {
+    try {
+      const { user, repo } = getRepoDetails(repoUrl);
+
+      const response = await axios.get(`/repo/${user}/${repo}`);
+
+      if (response.data.message === "This repository is public.") {
+        console.log(`The repository at ${repoUrl} is public.`);
+      } else if (response.data.message === "This repository is private.") {
+        console.log(`The repository at ${repoUrl} is private.`);
+      } else {
+        throw new Error('Could not determine the visibility of the repository.');
+      }
+
+      // Add your cloning logic here
+    } catch (error) {
+      console.error("Error fetching repository visibility:", error);
+      message.error("An error occurred while fetching the repository visibility");
+    }
+
+    closeCloneModal();
+  };
+
+  //피쳐1
+  // 추가된 상태
+  const [branchModalVisible, setBranchModalVisible] = useState<boolean>(false);
+  const [newBranchName, setNewBranchName] = useState<string>("");
+  const [branchList, setBranchList] = useState<string[]>([]);
+
+  // 브랜치 생성 모달을 연다
+  const openBranchModal = async () => {
+    setBranchModalVisible(true);
+    await fetchBranches();  // 브랜치 목록을 가져온다
+  };
+
+
+  // 브랜치 생성 모달을 닫는다
+  const closeBranchModal = () => {
+    setBranchModalVisible(false);
+    setNewBranchName("");
+  };
+  
+  // 브랜치를 생성한다
+  const handleCreateBranch = async () => {
+    // 브랜치 이름이 비어 있거나 공백만 있다면 오류 메시지를 표시하고 반환
+    if (!newBranchName || !newBranchName.trim()) {
+      message.error("Branch name cannot be empty or just spaces");
+      return;
+    }
+    
+    try {
+      await axios.post(`/api/branch_create`, {
+        git_path: await getGitRootPath(),
+        branch_name: newBranchName
+      });
+      setBranchModalVisible(false);
+      setNewBranchName("");
+      fetchBranches(); // 브랜치 목록을 갱신한다
+    } catch (error) {
+      console.error("Error creating branch:", error);
+    }
+  };
+
+
+  // 브랜치 목록을 가져온다
+  const fetchBranches = async () => {
+    try {
+      const response = await axios.post(`/api/branche_get`, {
+        git_path: await getGitRootPath()
+      });
+      if (response.status === 200) {
+        setBranchList(response.data);
+      } else {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error fetching branches:", error);
+    }
+  };
+
+  const branchColumns = [
     {
-      title: "Name",
-      dataIndex: "name",
-      key: "name",
-      render: (value: NameType, record: FileTableDataType) => {
-        if (!value) {
-          return "";
-        }
-        const { fileName, type_file, type_git } = value;
-        const normalizePath = (parts: string) => parts.replace(/\/+/g, '/');
-
-        return (
-          <NameWrapper onClick={() => {
-            if (value.fileName === "..") {
-              const newPath = path;
-              //console.log(newPath);
-              goBack();
-            } else if (type_file === "folder") {
-              const newPath = normalizePath(`${path}/${record.name.fileName}`);
-              if (!pathStack.includes(newPath)) {
-                const newPathStack = [...pathStack, newPath];
-                setPathStack(newPathStack);
-                onPathChange(newPath);
-              }
-            }
-          }}>
-            {getFileIcon(type_file, type_git)}
-            {fileName}
-          </NameWrapper>
-        );
-      },
-    },
-    {
-      title: "Size",
-      dataIndex: "size",
-      key: "size",
-      render: (value) => {
-        if (!value) {
-          return "-";
-        }
-  
-        return getFileSize(value);
-      },
-    },
-    {
-      title: "Modified Date",
-      dataIndex: "lastModified",
-      key: "lastModified",
-    },
-    {
-      title: "Git Action",
-      dataIndex: "action",
-      key: "action",
-      render: (value: GitType, record : FileTableDataType) => {
-        if (!value) {
-          return "";
-        }
-  
-        switch (value) {
-          case "untracked":
-            if (record.name.type_file !== "file"){
-              return "";
-            }
-
-            return (
-              <Tooltip title="Adding the file into a staging area">
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => gitAdd(record.name.fileName)}>
-                  Add
-                </Button>
-              </Tooltip>
-          );
-          
-          case "modified":
-            return (
-              <ActionWrapper>
-                <Tooltip title="Adding the file into a staging area">
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => gitAdd(record.name.fileName)}>
-                    Add
-                  </Button>
-                </Tooltip>
-          
-                <Tooltip title="Undoing the modification">
-                  <Button icon={<RedoOutlined />} onClick = {() => gitUndoModify(record.name.fileName)}>
-                    Restore
-                  </Button>
-                </Tooltip>
-              </ActionWrapper>
-          );
-          
-  
-          case "staged":
-            return (
-              <ActionWrapper>
-                <Tooltip title="Unstaging changes">
-                  <Button icon={<RedoOutlined />} onClick = {() => gitRestore(record.name.fileName)}>
-                    Restore
-                  </Button>
-                </Tooltip>
-              </ActionWrapper>
-            );
-  
-          case "committed":
-            return (
-              <ActionWrapper>
-                <Tooltip title=" Untracking file">
-                  <Button icon={<DeleteOutlined />} onClick = {() => gitRmCached(record.name.fileName)} danger>
-                    Untrack
-                  </Button>
-                </Tooltip>
-  
-                <Tooltip title="Deleting file">
-                  <Button type="primary" icon={<DeleteOutlined />} onClick = {() => gitRm(record.name.fileName)} danger>
-                    Delete
-                  </Button>
-                </Tooltip>
-                
-                <Tooltip title="Renaming file">
-                  <Button icon={<EditOutlined />} onClick={() => handleRenameClick(record)}>
-                    Rename
-                  </Button>
-                </Tooltip>
-              </ActionWrapper>
-            );
-
-          case "null" :
-            return "";
-
-          case "back" :
-            return "";
-
-          case "tracked" :
-            return "";
-        }
-      },
+      title: 'Branch Name',
+      dataIndex: 'name',
+      key: 'name',
     },
   ];
+  
+  
 
 
   return (
     <>
-    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-    <Breadcrumb>
-      <StyledBreadcrumbItem key="root" onClick={() => handleBreadcrumbClick('C:/')}>
-        <HomeOutlined />
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  <Breadcrumb style={{ marginRight: 'auto' }}>
+    <StyledBreadcrumbItem key="root" onClick={() => handleBreadcrumbClick('C:/')}>
+      <HomeOutlined />
+    </StyledBreadcrumbItem>
+    {pathStack.slice(1).map((path, index) => (
+      <StyledBreadcrumbItem key={index} onClick={() => handleBreadcrumbClick(path)}>
+        {path.split('/').pop()}
       </StyledBreadcrumbItem>
-      {pathStack.slice(1).map((path, index) => (
-        <StyledBreadcrumbItem key={index} onClick={() => handleBreadcrumbClick(path)}>
-          {path.split('/').pop()}
-        </StyledBreadcrumbItem>
-      ))}
-    </Breadcrumb>
+    ))}
+  </Breadcrumb>
 
-
-
-      {checkGitTypes() && (
+  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+    {checkGitTypes() && (
+      <>
         <Button
           type="primary"
           onClick={initRepo}
+          style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight: '10px' }}
+        >
+          <FolderAddOutlined style={{ fontSize: '25px', marginRight: '5px' }} /> Create Git Repo
+        </Button>
+
+        <Button
+          onClick={openCloneModal}
           style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center' }}
         >
-          <FolderAddOutlined style={{ fontSize: '25px', marginRight: '5px' }} /> Create Git Repository
+          <FolderAddOutlined style={{ fontSize: '25px', marginRight: '5px' }} /> Clone GitHub Repo
         </Button>
-      )}
-      {!checkGitTypes() && (
+      </>
+    )}
+
+    {!checkGitTypes() && (
+      <>
         <Button
           type="primary"
           onClick={() => {
             getStagedFiles();
             setCommitModalVisible(true);
           }}
+          style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
+        >
+          <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> Commit
+        </Button>
+
+        <Button
+          onClick={openBranchModal}
           style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center' }}
         >
-          <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> Commit Staged Changes
+          <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> Branch
         </Button>
-      )}
-    </div>
+      </>
+    )}
+  </div>
+</div>
+
     
     <br/>
 
@@ -782,6 +917,39 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
           }}
       />
     </Modal>
+
+      <Modal
+    title="Clone GitHub Repository"
+    visible={isCloneModalVisible}
+    onOk={handleCloneRepo}
+    onCancel={closeCloneModal}
+  >
+    <Input
+      placeholder="Enter the GitHub repository URL"
+      onChange={handleRepoUrlChange}
+    />
+    </Modal>
+
+      <Modal
+        title={<h3>Switch branches</h3>}
+        visible={branchModalVisible}
+        onOk={handleCreateBranch}
+        onCancel={closeBranchModal}
+      >
+        <Input
+          placeholder="Create a branch..."
+          onChange={(e) => setNewBranchName(e.target.value)}
+        />
+          <div
+            style={{
+              maxHeight: '500px', // 원하는 최대 높이를 설정하세요.
+              overflowY: 'auto' // 수직 스크롤바를 표시합니다.
+            }}
+          >
+            <br />
+            <Table columns={branchColumns} dataSource={branchList.map((branch, index) => ({ key: index, name: branch }))} pagination={false} />
+          </div>
+      </Modal>
     </>
   );
 }
