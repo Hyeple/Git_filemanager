@@ -665,7 +665,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
 
   //PROJ2_START
-
+  //피쳐4 : 현재 문제 아주 많음. api 부터 손봐야할듯?
   const [isCloneModalVisible, setCloneModalVisible] = useState(false);
   const [repoUrl, setRepoUrl] = useState("");
   
@@ -733,7 +733,9 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   const closeBranchModal = () => {
     setBranchModalVisible(false);
     setNewBranchName("");
+    setRenameBranchMode(""); // 추가된 코드
   };
+
   
   // 브랜치를 생성한다
   const handleCreateBranch = async () => {
@@ -788,10 +790,9 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     }
   };
   
-  // Call this function whenever you want to update the active branch
   useEffect(() => {
     fetchActiveBranch();
-  }, [fetchActiveBranch]);  // You might want to add other dependencies depending on your logic
+  }, [fetchActiveBranch]);
 
   // 체크아웃을 수행하는 API 호출
   async function checkoutBranch(gitPath: string, branchName: string) {
@@ -861,7 +862,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       render: (name: string) => (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
             onClick={async () => {
               if (renameBranchMode !== name) {
                 const gitPath = await getGitRootPath();
@@ -873,37 +874,46 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
           >
             {name === activeBranch && <CheckOutlined style={{ fontSize: '16px', marginRight: '5px' }} />}
             {renameBranchMode === name ? (
-              <Input
-                defaultValue={name}
-                onChange={e => setRenameBranchName(e.target.value)}
-                onPressEnter={async () => {
-                  const gitPath = await getGitRootPath();
-                  await renameBranch(gitPath, name, renameBranchName);
-                  setRenameBranchMode("");
-                  fetchBranches();
-                  fetchActiveBranch();
-                }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <Input
+                  defaultValue={name}
+                  onChange={e => setRenameBranchName(e.target.value)}
+                  onPressEnter={async () => {
+                    const gitPath = await getGitRootPath();
+                    await renameBranch(gitPath, name, renameBranchName);
+                    setRenameBranchMode("");
+                    fetchBranches();
+                    fetchActiveBranch();
+                  }}
+                />
+              </div>
             ) : (
               name
             )}
           </div>
           <div>
-            {name !== activeBranch && 
+            {name === activeBranch && (
+              <Button disabled style={{ marginRight: '5px' }}>
+                <DeleteOutlined />
+              </Button>
+            )}
+            {name !== activeBranch && (
               <Button danger style={{ marginRight: '5px' }} onClick={() => handleDeleteBranch(name)}>
                 <DeleteOutlined />
               </Button>
-            }
-            {name !== activeBranch && renameBranchMode !== name &&
+            )}
+            {renameBranchMode !== name && (
               <Button onClick={() => setRenameBranchMode(name)}>
                 <EditOutlined />
               </Button>
-            }
+            )}
           </div>
         </div>
       ),
     },
   ];
+  
+  
   
   
   return (
