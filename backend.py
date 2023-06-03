@@ -415,3 +415,156 @@ async def catch_all(path: str):
 @app.get("/")
 async def read_root():
     return FileResponse("frontend/build/index.html")
+
+
+
+# branch API from here
+
+class BranchGetRequest(BaseModel):
+    git_path: str
+
+@app.get("/api/branches")
+async def get_branches(request: BranchGetRequest):
+    git_path = request.git_path
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+    
+    branches = [branch.name for branch in repo.branches]
+    
+    if branches:
+        return {"branches": branches} 
+    else:
+        raise HTTPException(status_code=400, detail="Branch already exists")
+    
+
+class BranchRequest(BaseModel):  
+    git_path: str
+    branch_name: str
+
+@app.post("/api/branch_create")
+async def branch_create(request: BranchRequest):
+    git_path = request.git_path
+    branch_name = request.branch_name
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+    
+    # Check if the branch already exists
+    if any(branch_name == branch.name for branch in repo.branches):
+        raise HTTPException(status_code=400, detail="Branch already exists")
+
+    # Try to create new branch
+    try:
+        repo.create_head(branch_name)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "Branch created successfully"}
+
+
+@app.post("/api/branch_delete")
+async def branch_delete(request: BranchRequest):
+    git_path = request.git_path
+    branch_name = request.branch_name
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+    
+    # Check if the branch already exists
+    if not any(branch_name == branch.name for branch in repo.branches):
+        raise HTTPException(status_code=400, detail="Branch doesn't exists")
+
+    # Try to delete new branch
+    try:
+        repo.delete_head(branch_name)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "Branch deleted successfully"}
+
+
+class BranchRenameRequest(BaseModel):  
+    git_path: str
+    old_name: str
+    new_name: str
+
+@app.post("/api/branch_rename")
+async def branch_rename(request: BranchRenameRequest):
+    git_path = request.git_path
+    old_name = request.old_name
+    new_name = request.new_name
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+    
+    # Check if the branch already exists
+    if not any(old_name == branch.name for branch in repo.branches):
+        raise HTTPException(status_code=400, detail="Branch doesn't exists")
+    
+    # Check if new name already exists
+    if any(new_name == branch.name for branch in repo.branches):
+        raise HTTPException(status_code=400, detail="Branch already exists")    
+
+    # Try to rename new branch
+    try:
+        repo.heads[old_name].rename(new_name)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "Branch renamed successfully"}
+
+
+@app.post("/api/branch_checkout")
+async def branch_checkout(request: BranchRequest):
+    git_path = request.git_path
+    branch_name = request.branch_name
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+    
+    # Check if the branch already exists
+    if not any(branch_name == branch.name for branch in repo.branches):
+        raise HTTPException(status_code=400, detail="Branch doesn't exists")
+    
+    #check if the branch is current branch
+    if branch_name == repo.active_branch.name:
+        raise HTTPException(status_code=400, detail=f"Already on {branch_name}")
+
+    # Try to checkout branch
+    try:
+        repo.git.checkout(branch_name)
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": "Branch checkouted successfully"}
