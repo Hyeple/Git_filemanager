@@ -803,7 +803,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       key: 'name',
       render: (name: string) => (
         <>
-          {name === activeBranch && <CheckOutlined />}
+          {name === activeBranch && <CheckOutlined style={{ fontSize: '16px', marginRight: '5px' }} />}
           {name}
         </>
       )
