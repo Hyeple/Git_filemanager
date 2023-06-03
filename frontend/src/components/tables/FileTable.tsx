@@ -746,7 +746,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
         git_path: await getGitRootPath(),
         branch_name: newBranchName
       });
-      setBranchModalVisible(false);
       setNewBranchName("");
       fetchBranches(); // 브랜치 목록을 갱신한다
     } catch (error) {
@@ -830,6 +829,36 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       console.error("Error deleting branch:", error);
     }
   };
+
+    // 브랜치 이름 변경 모드를 추적하기 위한 상태 추가
+    const [renameBranchMode, setRenameBranchMode] = useState<string>("");
+
+    // 브랜치 이름 변경 모드에서 사용할 새 이름을 저장하기 위한 상태 추가
+    const [renameBranchName, setRenameBranchName] = useState<string>("");
+
+  // 브랜치 이름을 변경한다
+  async function renameBranch(gitPath: string, oldName: string, newName: string) {
+    try {
+      const response = await axios.post(`/api/branch_rename`, {
+        git_path: gitPath,
+        old_branch_name: oldName,
+        new_branch_name: newName
+      });
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const data = response.data;
+      console.log("Response data:", data);
+
+      return data;
+    } catch (error) {
+      console.error("Error renaming branch:", error);
+      return null;
+    }
+  }
+
   
   // Modify the branchColumns to include a checkmark for the active branch
   const branchColumns = [
@@ -842,20 +871,43 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
           <div
             style={{ cursor: 'pointer' }}
             onClick={async () => {
-              const gitPath = await getGitRootPath();
-              await checkoutBranch(gitPath, name);
-              fetchBranches();
-              fetchActiveBranch();
+              if (renameBranchMode !== name) {
+                const gitPath = await getGitRootPath();
+                await checkoutBranch(gitPath, name);
+                fetchBranches();
+                fetchActiveBranch();
+              }
             }}
           >
             {name === activeBranch && <CheckOutlined style={{ fontSize: '16px', marginRight: '5px' }} />}
-            {name}
+            {renameBranchMode === name ? (
+              <Input
+                defaultValue={name}
+                onChange={e => setRenameBranchName(e.target.value)}
+                onPressEnter={async () => {
+                  const gitPath = await getGitRootPath();
+                  await renameBranch(gitPath, name, renameBranchName);
+                  setRenameBranchMode("");
+                  fetchBranches();
+                  fetchActiveBranch();
+                }}
+              />
+            ) : (
+              name
+            )}
           </div>
-          {name !== 'master' && name !== activeBranch && 
-            <Button danger onClick={() => handleDeleteBranch(name)}>
-              <DeleteOutlined />
-            </Button>
-          }
+          <div>
+            {name !== activeBranch && 
+              <Button danger style={{ marginRight: '5px' }} onClick={() => handleDeleteBranch(name)}>
+                <DeleteOutlined />
+              </Button>
+            }
+            {name !== activeBranch && renameBranchMode !== name &&
+              <Button onClick={() => setRenameBranchMode(name)}>
+                <EditOutlined />
+              </Button>
+            }
+          </div>
         </div>
       ),
     },
@@ -1020,24 +1072,47 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       <Modal
         title={<h3>Switch branches</h3>}
         visible={branchModalVisible}
-        onOk={handleCreateBranch}
+        onOk={closeBranchModal}
         onCancel={closeBranchModal}
+        okButtonProps={{
+          style: {
+            marginRight: '8px',
+            display: 'none',
+          },
+        }}
+        cancelButtonProps={{
+          style: {
+            display: 'none',
+          },
+        }}
+
       >
-        <br/>
-        <Input
-          placeholder="Create a branch..."
-          onChange={(e) => setNewBranchName(e.target.value)}
-        />
-          <div
-            style={{
-              maxHeight: '500px', // 원하는 최대 높이를 설정하세요.
-              overflowY: 'auto' // 수직 스크롤바를 표시합니다.
-            }}
-          >
-            <br />
-            <Table columns={branchColumns} dataSource={branchList.map((branch, index) => ({ key: index, name: branch }))} pagination={false} />
-          </div>
-      </Modal>
+        <br />
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Input
+            placeholder="Create a branch..."
+            value={newBranchName}
+            onChange={(e) => setNewBranchName(e.target.value)}
+            style={{ flex: '1', marginRight: '8px' }}
+          />
+          <Button type="primary" onClick={handleCreateBranch}>
+            OK
+          </Button>
+        </div>
+        <div
+          style={{
+            maxHeight: '500px',
+            overflowY: 'auto',
+          }}
+        >
+          <br />
+          <Table 
+            columns={branchColumns} 
+            dataSource={branchList.map((branch, index) => ({ key: index, name: branch }))} 
+            pagination={false} />
+        </div>
+    </Modal>
+
     </>
   );
 }
