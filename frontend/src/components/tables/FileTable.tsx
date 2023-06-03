@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Modal, Button, Table, Tooltip, Input, message, Breadcrumb } from "antd";
-import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined, CheckOutlined, SendOutlined, MergeCellsOutlined } from "@ant-design/icons";
+import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined, CheckOutlined, SendOutlined, MergeCellsOutlined, HistoryOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
@@ -738,8 +738,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     // 파일 리스트 다시 불러오기
     await fetchApi(path);
   };
-
-
   
   // 브랜치를 생성한다
   const handleCreateBranch = async () => {
@@ -860,7 +858,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   }
 
 
-  
   //피쳐2를 해볼까요~~~
   async function mergeBranch(gitPath: string, targetBranch: string) {
     try {
@@ -888,9 +885,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
         return null;
     }
 }
-  
-
-
   // Modify the branchColumns to include a checkmark for the active branch
   const branchColumns = [
     {
@@ -1022,11 +1016,19 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
                 <SendOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> Commit
               </Button>
             </>
+            
           )}
         </div>
       </div>
 
     <br/>
+      
+      <Button
+        onClick={openBranchModal}
+        style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
+      >
+        <HistoryOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> git commit history
+      </Button>
 
       <Table
         columns={columns}
