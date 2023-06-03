@@ -816,6 +816,20 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       return null;
     }
   }
+
+    // 브랜치를 삭제한다
+  const handleDeleteBranch = async (branchName: string) => {
+    try {
+      await axios.post(`/api/branch_delete`, {
+        git_path: await getGitRootPath(),
+        branch_name: branchName
+      });
+      // After deletion, update the branch list
+      fetchBranches();
+    } catch (error) {
+      console.error("Error deleting branch:", error);
+    }
+  };
   
   // Modify the branchColumns to include a checkmark for the active branch
   const branchColumns = [
@@ -824,22 +838,31 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       dataIndex: 'name',
       key: 'name',
       render: (name: string) => (
-        <div
-          style={{ cursor: 'pointer' }}  // 마우스 커서를 "손가락" 모양으로 변경
-          onClick={async () => {
-            // 브랜치 이름을 클릭하면 해당 브랜치로 체크아웃
-            const gitPath = await getGitRootPath();
-            await checkoutBranch(gitPath, name);
-            fetchBranches();  // 체크아웃 후 브랜치 목록을 갱신
-            fetchActiveBranch();  // 체크아웃 후 활성 브랜치를 갱신
-          }}
-        >
-          {name === activeBranch && <CheckOutlined style={{ fontSize: '16px', marginRight: '5px' }} />}
-          {name}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div
+            style={{ cursor: 'pointer' }}
+            onClick={async () => {
+              const gitPath = await getGitRootPath();
+              await checkoutBranch(gitPath, name);
+              fetchBranches();
+              fetchActiveBranch();
+            }}
+          >
+            {name === activeBranch && <CheckOutlined style={{ fontSize: '16px', marginRight: '5px' }} />}
+            {name}
+          </div>
+          {name !== 'master' && name !== activeBranch && 
+            <Button danger onClick={() => handleDeleteBranch(name)}>
+              <DeleteOutlined />
+            </Button>
+          }
         </div>
-      )
+      ),
     },
   ];
+  
+  
+  
   
 
 
