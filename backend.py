@@ -9,10 +9,10 @@ from pydantic import BaseModel
 from git import Repo, GitCommandError, InvalidGitRepositoryError, NULL_TREE
 import os 
 from typing import Optional
+import requests
 import locale
 import datetime
 import logging
-import requests
 from collections import deque
 
 path_stack = deque()
@@ -42,19 +42,20 @@ class FileItem(BaseModel):
     last_modified: Optional[str] = None
     path: Optional[str] = None
     git_path: Optional[str] = None
+    
     file_path : Optional[str] = None
+    file_paths: Optional[list[str]] = None
     old_file_path : Optional[str] = None
     new_file_path : Optional[str] = None
     commit_message: Optional[str] = None
-    file_paths: Optional[list[str]] = None
-
-    https: str # cloning https
-    username: str # username for private clone
-    access_token: str # token for private clone
-
-
-path_stack = deque() # path_stack 선언
-
+    
+    branch_name: Optional[str] = None
+    old_branch_name: Optional[str] = None
+    new_branch_name: Optional[str] = None
+    commit_checksum: Optional[str] = None
+    remote_path : Optional[str] = None
+    repo_type : Optional[str] = None
+    access_token : Optional[str] = None
 
 
 def sort_key(item: FileItem) -> str:
@@ -425,38 +426,9 @@ async def read_root():
     return FileResponse("frontend/build/index.html")
 
 
-# branch API from here
-
-class BranchGetRequest(BaseModel):
-    git_path: str
-
-@app.get("/api/branches")
-async def get_branches(request: BranchGetRequest):
-    git_path = request.git_path
-
-    # Check if the path is a valid directory
-    if not os.path.exists(git_path) or not os.path.isdir(git_path):
-        raise HTTPException(status_code=404, detail="Directory not found")
-
-    try:
-        repo = Repo(git_path)
-    except InvalidGitRepositoryError:
-        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
-    
-    branches = [branch.name for branch in repo.branches]
-    
-    if branches:
-        return {"branches": branches} 
-    else:
-        raise HTTPException(status_code=400, detail="Branch already exists")
-    
-
-class BranchRequest(BaseModel):  
-    git_path: str
-    branch_name: str
-
+# feature 1 : create, checkout, delete, rename
 @app.post("/api/branch_create")
-async def branch_create(request: BranchRequest):
+async def branch_create(request: FileItem):
     git_path = request.git_path
     branch_name = request.branch_name
 
@@ -465,6 +437,7 @@ async def branch_create(request: BranchRequest):
         raise HTTPException(status_code=404, detail="Directory not found")
 
     try:
+        # open git repo
         repo = Repo(git_path)
     except InvalidGitRepositoryError:
         raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
@@ -473,8 +446,8 @@ async def branch_create(request: BranchRequest):
     if any(branch_name == branch.name for branch in repo.branches):
         raise HTTPException(status_code=400, detail="Branch already exists")
 
-    # Try to create new branch
     try:
+        # Try to create new branch
         repo.create_head(branch_name)
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -483,7 +456,7 @@ async def branch_create(request: BranchRequest):
 
 
 @app.post("/api/branch_delete")
-async def branch_delete(request: BranchRequest):
+async def branch_delete(request: FileItem):
     git_path = request.git_path
     branch_name = request.branch_name
 
@@ -492,6 +465,7 @@ async def branch_delete(request: BranchRequest):
         raise HTTPException(status_code=404, detail="Directory not found")
 
     try:
+        # open git repo
         repo = Repo(git_path)
     except InvalidGitRepositoryError:
         raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
@@ -500,8 +474,12 @@ async def branch_delete(request: BranchRequest):
     if not any(branch_name == branch.name for branch in repo.branches):
         raise HTTPException(status_code=400, detail="Branch doesn't exists")
 
-    # Try to delete new branch
+    # 삭제하려는 브랜치가 현재 작업중인 브랜치라면 삭제 불가.
+    if branch_name == repo.active_branch.name:
+        raise HTTPException(status_code=400, detail="Cannot delete branch currently checked out")
+
     try:
+        # Try to delete branch, branch_name은 입력 받아야 함
         repo.delete_head(branch_name)
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -509,16 +487,11 @@ async def branch_delete(request: BranchRequest):
     return {"message": "Branch deleted successfully"}
 
 
-class BranchRenameRequest(BaseModel):  
-    git_path: str
-    old_name: str
-    new_name: str
-
 @app.post("/api/branch_rename")
-async def branch_rename(request: BranchRenameRequest):
+async def branch_rename(request: FileItem):
     git_path = request.git_path
-    old_name = request.old_name
-    new_name = request.new_name
+    old_name = request.old_branch_name
+    new_name = request.new_branch_name
 
     # Check if the path is a valid directory
     if not os.path.exists(git_path) or not os.path.isdir(git_path):
@@ -547,7 +520,7 @@ async def branch_rename(request: BranchRenameRequest):
 
 
 @app.post("/api/branch_checkout")
-async def branch_checkout(request: BranchRequest):
+async def branch_checkout(request: FileItem):
     git_path = request.git_path
     branch_name = request.branch_name
 
@@ -577,10 +550,9 @@ async def branch_checkout(request: BranchRequest):
     return {"message": "Branch checkouted successfully"}
 
 
-
-# merge API from here
+# feature 2 : branch merge
 @app.post("/api/branch_merge")
-async def branch_merge(request: BranchRequest):
+async def branch_merge(request: FileItem):
     git_path = request.git_path
     branch_name = request.branch_name   # target
 
@@ -607,15 +579,15 @@ async def branch_merge(request: BranchRequest):
             if entry.stage != 0 and entry.path not in unmerged_paths:
                 unmerged_paths.append(entry.path)    
         repo.git.merge("--abort")
-        raise HTTPException(status_code=500, detail="Merge failed", headers=unmerged_paths)    
+        raise HTTPException(status_code=500, detail="Merge failed", headers={"unmerged_paths": ",".join(unmerged_paths)})    
 
     return {"message": "Branch merged successfully"}
 
-# for Feature_3
 
+# feature 3 : git history
 @app.get("api/git_history")
-async def get_git_history(request: GitItem):
-    git_path = request.repoPath
+async def get_git_history(request: FileItem):
+    git_path = request.git_path
     # branch_name = request.branch_name ( if sorting by selected branch for graph )
 
     try:
@@ -627,7 +599,7 @@ async def get_git_history(request: GitItem):
         history_list = []
 
         for commit in commits:
-
+            # 브랜치 이름 리스트
             branch_names = [branch.name for branch in repo.branches if commit in repo.iter_commits(branch)]
             
             # we may need more information about commit for making history tree
@@ -647,36 +619,16 @@ async def get_git_history(request: GitItem):
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# git_history will get git_root_path
-
-# repo.iter_commits() : all commit travels and get commit
-# > travel commits in order of creation date
-# repo.iter_commits('branch_name') : travel commits in branch_name
-
-# Commit object has these informations
-# hexsha : commit checksum
-# message : commit message
-# author : commit author ( Actor object : name & e-mail )
-# committed_date : commit date ( unix timestamp )
-# parents : parent commits => Commit object list
-# tree : tree of commit ( Tree object )
-
-# about commit.parents ( usually commits have one parents but in merge.. )
-# if the commit created by merge.. first: mainline , second..: merged last commit
-
-# basic history list has commits in order of creation time
-# each commits have basic information for drawing history tree
-# > checksum / parent's checksums / branches / author.name / (commit date)
-
 
 @app.get("/api/commit_information")
-async def get_commit_information(request:GitItem):
-    git_path = request.repoPath
+async def get_commit_information(request:FileItem):
+    git_path = request.git_path
 
     try:
         repo = Repo(git_path)
 
         try:
+            # 특정 커밋 get
             commit = repo.commit(request.commit_checksum)
         except:
             raise HTTPException(status_code=404, detail="Commit not found")
@@ -691,31 +643,14 @@ async def get_commit_information(request:GitItem):
         }
 
         return commit_info
-
-# Feature 4
-
-@app.post("/api/public_clone")
-async def public_clone(request: GitItem):
-    path = request.path
-    clone_link = request.https
-
-    try:
-        Repo.clone_from(clone_link, path)
-
-        return {"message": "Clone Successfully"}
-
     
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# commit's detail informaion
-# > commit checksum / parent_checksums / author / commiter / date
-# this api does not have changed data for files
-
+    
 
 @app.get("/api/changed_files")
-def get_changed_files(request: GitItem):
-    git_path = request.repoPath
+def get_changed_files(request: FileItem):
+    git_path = request.git_path
 
     try:
         repo = Repo(git_path)
@@ -754,24 +689,15 @@ def get_changed_files(request: GitItem):
     
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# this api recognize files in type added / removed / modified
-# but we can think the file type renamed ( copy ? )
-
-# changed files have elements > ('file_name', 'change_type')
-
-# this api also only recognize mainline branch
-# but we can choose branch and parameter branch or parent checksum
-# if get branch > branch and parent checksum matching 
-# if get parent checksum > if not initial commit, we can replace it
-
+    
 
 @app.get("/api/changed_data")
-def get_changed_data(request: GitItem):
-    git_path = request.repoPath
+def get_changed_data(request: FileItem):
+    git_path = request.git_path
     file_path = request.path
 
     try:
+        # open git repo
         repo = Repo(git_path)
 
         try:
@@ -803,34 +729,13 @@ def get_changed_data(request: GitItem):
     
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
 
-# parameter : repoPath and filePath
-
-# commit.diff(NULL_TREE) is for first commit >> all codes are changes
-# first commit : a_path == None
-
-# a_path : file path for parent commit & b_path : file path for current commit
-
-# change_type: 'A' : add & 'D' : remove & 'M' : modified & 'R' : renamed & 'C' : copy
-# line changes : before changes > removed_lines & after changes > added_lines
-# add_lines and removed_lines are list for change strings
-
-# this api show information based on main line branch
-# so, if you see changed information based on merged branch
-# > we can change diff_index = commit.parents[0].diff(commit)
-# > to diff_index = commit.parents[1 or 2 ...].diff(commit)
-
-# this case, parameter need commit_checksum > checksum == commit.parents[0] or not
-
-# we must have more error handling codes
-
-# Repo.clone(url, path)
-# > clone in url to path
-
-
-@app.get("/api/repo_status")
-async def get_repo_status(request: GitItem):
-    clone_link = request.https
+#feature 4 : git clone
+@app.post("/api/clone_and_check_status")
+async def clone_and_check_status(request: FileItem):
+    path = request.path
+    clone_link = request.remote_path
     access_token = request.access_token
 
     headers = {
@@ -838,43 +743,20 @@ async def get_repo_status(request: GitItem):
     }
 
     try:
-        response = requests.get(clone_link, headers = headers)
+        # check repo_status
+        response = requests.get(clone_link, headers=headers)
 
         if response.status_code == 200:
-            return {'public': response.json()["private"] == False}
+            # 레포가 퍼블릭이거나 access_token이 일치한다면 clone 진행
+            Repo.clone_from(clone_link, path, env={'GIT_ASKPASS': 'echo', 'GIT_USERNAME': 'git', 'GIT_PASSWORD': access_token})
+            return {"message": "Clone Successfully"}
         elif response.status_code == 404:
             return {'error': 'Repository does not exist or not access have'}
         else:
             return {'error': 'Error occured'}
-    
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# for this api, we need to import requests >> install
-
-# to access git repository and get private or public,
-# this api need access_token early
-
-# if repo is public, 'public': 'True' / if repo is private, 'public': 'False'
-# if repo does not exist or does not have access : status_code == 404
-
-
-@app.post("/api/private_clone")
-async def private_clone(request: GitItem):
-    path = request.path
-    clone_link = request.https
-    username = request.username
-    access_token = request.access_token
-
-    try:
-        os.environ['GIT_ASKPASS'] = 'echo'
-        os.environ['TOKEN'] = access_token
-
-        Repo.clone_from(clone_link, path)
-
-        return {"message": "Clone Successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-# for private clone
-# basic https >> need id and Access token
+# Repo.clone(url, path)
+# > clone in url to path
