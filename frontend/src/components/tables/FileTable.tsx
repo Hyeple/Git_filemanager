@@ -794,6 +794,28 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   useEffect(() => {
     fetchActiveBranch();
   }, [fetchActiveBranch]);  // You might want to add other dependencies depending on your logic
+
+  // 체크아웃을 수행하는 API 호출
+  async function checkoutBranch(gitPath: string, branchName: string) {
+    try {
+      const response = await axios.post(`/api/branch_checkout`, {
+        git_path: gitPath,
+        branch_name: branchName
+      });
+
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const data = response.data;
+      console.log("Response data:", data);
+
+      return data;
+    } catch (error) {
+      console.error("Error checking out branch:", error);
+      return null;
+    }
+  }
   
   // Modify the branchColumns to include a checkmark for the active branch
   const branchColumns = [
@@ -802,17 +824,27 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       dataIndex: 'name',
       key: 'name',
       render: (name: string) => (
-        <>
+        <div
+          style={{ cursor: 'pointer' }}  // 마우스 커서를 "손가락" 모양으로 변경
+          onClick={async () => {
+            // 브랜치 이름을 클릭하면 해당 브랜치로 체크아웃
+            const gitPath = await getGitRootPath();
+            await checkoutBranch(gitPath, name);
+            fetchBranches();  // 체크아웃 후 브랜치 목록을 갱신
+            fetchActiveBranch();  // 체크아웃 후 활성 브랜치를 갱신
+          }}
+        >
           {name === activeBranch && <CheckOutlined style={{ fontSize: '16px', marginRight: '5px' }} />}
           {name}
-        </>
+        </div>
       )
     },
   ];
   
 
-  
 
+
+ 
 
   return (
     <>
