@@ -864,24 +864,30 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   //피쳐2를 해볼까요~~~
   async function mergeBranch(gitPath: string, targetBranch: string) {
     try {
-      const response = await axios.post(`/api/branch_merge`, {
-        git_path: gitPath,
-        branch_name: targetBranch
-      });
+        const response = await axios.post(`/api/branch_merge`, {
+            git_path: gitPath,
+            branch_name: targetBranch
+        });
   
-      if (response.status !== 200) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
+        if (response.status !== 200) {
+            throw new Error(`API request failed with status ${response.status}`);
+        }
   
-      const data = response.data;
-      console.log("Response data:", data);
-  
-      return data;
+        message.success("Merge Success!");
+        return response.data;
     } catch (error) {
-      console.error("Error merging branch:", error);
-      return null;
+        if (axios.isAxiosError(error) && error.response && 
+        error.response.status === 500 && error.response.headers["unmerged_paths"]) {
+            const unmergedPaths = error.response.headers["unmerged_paths"];
+            
+            message.error("Merge Conflict...");
+            message.error(`Unmerged paths: ${unmergedPaths}`)
+        } else {
+            console.error("Error merging branch:", error);
+        }
+        return null;
     }
-  }
+}
   
 
 
