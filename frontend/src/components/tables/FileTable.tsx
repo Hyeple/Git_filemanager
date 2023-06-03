@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Modal, Button, Table, Tooltip, Input, message, Breadcrumb } from "antd";
-import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined } from "@ant-design/icons";
+import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined, CheckOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
@@ -771,14 +771,46 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     }
   };
 
+  const [activeBranch, setActiveBranch] = useState<string>("");
+
+  // Fetch active branch
+  const fetchActiveBranch = async () => {
+    try {
+      const response = await axios.post(`/api/curbranch_get`, {
+        git_path: await getGitRootPath()
+      });
+  
+      if (response.status === 200) {
+        setActiveBranch(response.data.active_branch);
+      } else {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error fetching active branch:", error);
+    }
+  };
+  
+  // Call this function whenever you want to update the active branch
+  useEffect(() => {
+    fetchActiveBranch();
+  }, [fetchActiveBranch]);  // You might want to add other dependencies depending on your logic
+  
+  // Modify the branchColumns to include a checkmark for the active branch
   const branchColumns = [
     {
-      title: 'Branch Name',
+      title: 'Branches',
       dataIndex: 'name',
       key: 'name',
+      render: (name: string) => (
+        <>
+          {name === activeBranch && <CheckOutlined />}
+          {name}
+        </>
+      )
     },
   ];
   
+
   
 
 
@@ -819,21 +851,21 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     {!checkGitTypes() && (
       <>
         <Button
+          onClick={openBranchModal}
+          style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
+        >
+          <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> {activeBranch}
+        </Button>
+
+        <Button
           type="primary"
           onClick={() => {
             getStagedFiles();
             setCommitModalVisible(true);
           }}
-          style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
-        >
-          <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> Commit
-        </Button>
-
-        <Button
-          onClick={openBranchModal}
           style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center' }}
         >
-          <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> Branch
+          <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> Commit
         </Button>
       </>
     )}
@@ -889,7 +921,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       </Modal>
 
       <Modal
-        title="Commit Staged Changes"
+        title= <h3>Commit Staged Changes</h3>
         visible={commitModalVisible}
         onOk={handleCommit}
         onCancel={handleCancelCommitModal}
@@ -936,6 +968,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
         onOk={handleCreateBranch}
         onCancel={closeBranchModal}
       >
+        <br/>
         <Input
           placeholder="Create a branch..."
           onChange={(e) => setNewBranchName(e.target.value)}

@@ -442,6 +442,26 @@ async def get_branches(request: FileItem):
 
     return branch_names
 
+@app.post("/api/curbranch_get")
+async def get_branches(request: FileItem):
+    git_path = request.git_path
+
+    # Check if the path is a valid directory
+    if not os.path.exists(git_path) or not os.path.isdir(git_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        # open git repo
+        repo = Repo(git_path)
+    except InvalidGitRepositoryError:
+        raise HTTPException(status_code=400, detail="The directory is not a valid git repository")
+
+    # Get the name of the active branch
+    active_branch_name = repo.active_branch.name
+
+    return {"active_branch": active_branch_name}
+
+
 
 @app.post("/api/branch_create")
 async def branch_create(request: FileItem):
