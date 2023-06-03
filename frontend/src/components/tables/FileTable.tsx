@@ -730,11 +730,15 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   };
 
   // 브랜치 생성 모달을 닫는다
-  const closeBranchModal = () => {
+  const closeBranchModal = async () => {
     setBranchModalVisible(false);
     setNewBranchName("");
-    setRenameBranchMode(""); // 추가된 코드
+    setRenameBranchMode("");
+
+    // 파일 리스트 다시 불러오기
+    await fetchApi(path);
   };
+
 
   
   // 브랜치를 생성한다
@@ -808,6 +812,8 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
       const data = response.data;
       setBranchModalVisible(false);
+      // 파일 리스트 다시 불러오기
+      await fetchApi(path);
       console.log("Response data:", data);
 
       return data;
@@ -852,6 +858,32 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       return null;
     }
   }
+
+
+  
+  //피쳐2를 해볼까요~~~
+  async function mergeBranch(gitPath: string, targetBranch: string) {
+    try {
+      const response = await axios.post(`/api/branch_merge`, {
+        git_path: gitPath,
+        branch_name: targetBranch
+      });
+  
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+  
+      const data = response.data;
+      console.log("Response data:", data);
+  
+      return data;
+    } catch (error) {
+      console.error("Error merging branch:", error);
+      return null;
+    }
+  }
+  
+
 
   // Modify the branchColumns to include a checkmark for the active branch
   const branchColumns = [
@@ -907,11 +939,25 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
                 <EditOutlined />
               </Button>
             )}
+            {name !== activeBranch && (
+              <Button
+                style={{ marginRight: '5px' }}
+                onClick={async () => {
+                  const gitPath = await getGitRootPath();
+                  await mergeBranch(gitPath, name);
+                  fetchBranches();
+                  fetchActiveBranch();
+                }}
+              >
+                Merge
+              </Button>
+            )}
           </div>
         </div>
       ),
     },
   ];
+  
   
   
   
