@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Modal, Button, Table, Tooltip, Input, message, Breadcrumb } from "antd";
-import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined, CheckOutlined } from "@ant-design/icons";
+import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined, CheckOutlined, SendOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
@@ -719,13 +719,15 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   const [branchModalVisible, setBranchModalVisible] = useState<boolean>(false);
   const [newBranchName, setNewBranchName] = useState<string>("");
   const [branchList, setBranchList] = useState<string[]>([]);
+  const [renameBranchMode, setRenameBranchMode] = useState<string>("");
+  const [renameBranchName, setRenameBranchName] = useState<string>("");
+  const [activeBranch, setActiveBranch] = useState<string>("");
 
   // 브랜치 생성 모달을 연다
   const openBranchModal = async () => {
     setBranchModalVisible(true);
     await fetchBranches();  // 브랜치 목록을 가져온다
   };
-
 
   // 브랜치 생성 모달을 닫는다
   const closeBranchModal = () => {
@@ -753,7 +755,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     }
   };
 
-
   // 브랜치 목록을 가져온다
   const fetchBranches = async () => {
     try {
@@ -769,8 +770,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       console.error("Error fetching branches:", error);
     }
   };
-
-  const [activeBranch, setActiveBranch] = useState<string>("");
 
   // Fetch active branch
   const fetchActiveBranch = async () => {
@@ -807,6 +806,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       }
 
       const data = response.data;
+      setBranchModalVisible(false);
       console.log("Response data:", data);
 
       return data;
@@ -815,7 +815,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       return null;
     }
   }
-
     // 브랜치를 삭제한다
   const handleDeleteBranch = async (branchName: string) => {
     try {
@@ -829,12 +828,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       console.error("Error deleting branch:", error);
     }
   };
-
-    // 브랜치 이름 변경 모드를 추적하기 위한 상태 추가
-    const [renameBranchMode, setRenameBranchMode] = useState<string>("");
-
-    // 브랜치 이름 변경 모드에서 사용할 새 이름을 저장하기 위한 상태 추가
-    const [renameBranchName, setRenameBranchName] = useState<string>("");
 
   // 브랜치 이름을 변경한다
   async function renameBranch(gitPath: string, oldName: string, newName: string) {
@@ -859,7 +852,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     }
   }
 
-  
   // Modify the branchColumns to include a checkmark for the active branch
   const branchColumns = [
     {
@@ -914,72 +906,64 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   ];
   
   
-  
-  
-
-
-
- 
-
   return (
     <>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-  <Breadcrumb style={{ marginRight: 'auto' }}>
-    <StyledBreadcrumbItem key="root" onClick={() => handleBreadcrumbClick('C:/')}>
-      <HomeOutlined />
-    </StyledBreadcrumbItem>
-    {pathStack.slice(1).map((path, index) => (
-      <StyledBreadcrumbItem key={index} onClick={() => handleBreadcrumbClick(path)}>
-        {path.split('/').pop()}
-      </StyledBreadcrumbItem>
-    ))}
-  </Breadcrumb>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Breadcrumb style={{ marginRight: 'auto' }}>
+          <StyledBreadcrumbItem key="root" onClick={() => handleBreadcrumbClick('C:/')}>
+            <HomeOutlined />
+          </StyledBreadcrumbItem>
+          {pathStack.slice(1).map((path, index) => (
+            <StyledBreadcrumbItem key={index} onClick={() => handleBreadcrumbClick(path)}>
+              {path.split('/').pop()}
+            </StyledBreadcrumbItem>
+          ))}
+        </Breadcrumb>
 
-  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-    {checkGitTypes() && (
-      <>
-        <Button
-          type="primary"
-          onClick={initRepo}
-          style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight: '10px' }}
-        >
-          <FolderAddOutlined style={{ fontSize: '25px', marginRight: '5px' }} /> Create Git Repo
-        </Button>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          {checkGitTypes() && (
+            <>
+              <Button
+                type="primary"
+                onClick={initRepo}
+                style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight: '10px' }}
+              >
+                <FolderAddOutlined style={{ fontSize: '25px', marginRight: '5px' }} /> Create Git Repo
+              </Button>
 
-        <Button
-          onClick={openCloneModal}
-          style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center' }}
-        >
-          <FolderAddOutlined style={{ fontSize: '25px', marginRight: '5px' }} /> Clone GitHub Repo
-        </Button>
-      </>
-    )}
+              <Button
+                onClick={openCloneModal}
+                style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center' }}
+              >
+                <FolderAddOutlined style={{ fontSize: '25px', marginRight: '5px' }} /> Clone GitHub Repo
+              </Button>
+            </>
+          )}
 
-    {!checkGitTypes() && (
-      <>
-        <Button
-          onClick={openBranchModal}
-          style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
-        >
-          <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> {activeBranch}
-        </Button>
+          {!checkGitTypes() && (
+            <>
+              <Button
+                onClick={openBranchModal}
+                style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
+              >
+                <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> {activeBranch}
+              </Button>
 
-        <Button
-          type="primary"
-          onClick={() => {
-            getStagedFiles();
-            setCommitModalVisible(true);
-          }}
-          style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center' }}
-        >
-          <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> Commit
-        </Button>
-      </>
-    )}
-  </div>
-</div>
+              <Button
+                type="primary"
+                onClick={() => {
+                  getStagedFiles();
+                  setCommitModalVisible(true);
+                }}
+                style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center' }}
+              >
+                <SendOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> Commit
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
 
-    
     <br/>
 
       <Table
