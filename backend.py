@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from urllib.parse import unquote
 from typing import List
 from pydantic import BaseModel
-from git import Repo, GitCommandError, InvalidGitRepositoryError
+from git import Repo, GitCommandError, InvalidGitRepositoryError, NULL_TREE
 import os 
 from typing import Optional
 import locale
@@ -33,6 +33,7 @@ app.add_middleware(
 app.mount("/frontend/static", StaticFiles(directory="frontend/build/static"), name="static")
 
 class FileItem(BaseModel):
+<<<<<<< HEAD
     key: Optional[int] = None
     name: Optional[str] = None
     file_type: Optional[str] = None
@@ -47,6 +48,31 @@ class FileItem(BaseModel):
     commit_message: Optional[str] = None
     file_paths: Optional[list[str]] = None
     
+=======
+    key: int
+    name: str
+    file_type: str
+    git_types : dict[str] # git_types_dict
+    git_type: str
+    size: float  # float으로 변경(int 숫자 범위)
+    last_modified: str
+    path: str # file_path
+
+    git_types[path] = git_type
+
+
+# FileItem inherit 클래스 만들기
+class GitItem(FileItem):
+    repoPath: str # git_path
+    newPath: str # after moving path
+    commitMsg: str # commit mesage
+    file_paths: list[str] # file_path_list
+    branch_name: str # heading branch name
+    commit_checksum: str # commit checksum string
+
+
+path_stack = deque() # path_stack 선언
+>>>>>>> feature3_api
 
 
 def sort_key(item: FileItem) -> str:
@@ -417,6 +443,7 @@ async def read_root():
     return FileResponse("frontend/build/index.html")
 
 
+<<<<<<< HEAD
 
 # branch API from here
 
@@ -603,3 +630,204 @@ async def branch_merge(request: BranchRequest):
         raise HTTPException(status_code=500, detail="Merge failed", headers=unmerged_paths)    
 
     return {"message": "Branch merged successfully"}
+=======
+# for Feature_3
+
+@app.get("api/git_history")
+async def get_git_history(request: GitItem):
+    git_path = request.repoPath
+    # branch_name = request.branch_name ( if sorting by selected branch for graph )
+
+    try:
+        repo = Repo(git_path)
+
+        # all branch & creation time
+        commits = list(repo.iter_commits())
+
+        history_list = []
+
+        for commit in commits:
+
+            branch_names = [branch.name for branch in repo.branches if commit in repo.iter_commits(branch)]
+            
+            # we may need more information about commit for making history tree
+            commit_info = {
+                'commit_checksum': commit.hexsha, # string type
+                'parent_checksums': [parent.hexsha for parent in commit.parents],
+                'commit_message': commit.message, 
+                'branches': branch_names,
+                'author': commit.author.name, # string type
+                #'date': datetime.datetime.fromtimestamp(
+                #    commit.authored_datetime).strftime("%Y-%m-%d %H:%M:%S")
+            }
+            history_list.apeend(commit_info)
+        
+        return history_list
+    
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# git_history will get git_root_path
+
+# repo.iter_commits() : all commit travels and get commit
+# > travel commits in order of creation date
+# repo.iter_commits('branch_name') : travel commits in branch_name
+
+# Commit object has these informations
+# hexsha : commit checksum
+# message : commit message
+# author : commit author ( Actor object : name & e-mail )
+# committed_date : commit date ( unix timestamp )
+# parents : parent commits => Commit object list
+# tree : tree of commit ( Tree object )
+
+# about commit.parents ( usually commits have one parents but in merge.. )
+# if the commit created by merge.. first: mainline , second..: merged last commit
+
+# basic history list has commits in order of creation time
+# each commits have basic information for drawing history tree
+# > checksum / parent's checksums / branches / author.name / (commit date)
+
+
+@app.get("/api/commit_information")
+async def get_commit_information(request:GitItem):
+    git_path = request.repoPath
+
+    try:
+        repo = Repo(git_path)
+
+        try:
+            commit = repo.commit(request.commit_checksum)
+        except:
+            raise HTTPException(status_code=404, detail="Commit not found")
+        
+        commit_info = {
+            'commit_checksum': commit.hexsha,
+            'parent_checksums': [parent.hexsha for parent in commit.parents],
+            'author': commit.author.name,
+            'commiter': commit.committer.name,
+            'date': datetime.datetime.fromtimestamp(
+                commit.authored_datetime).strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        return commit_info
+    
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# commit's detail informaion
+# > commit checksum / parent_checksums / author / commiter / date
+# this api does not have changed data for files
+
+
+@app.get("/api/changed_files")
+def get_changed_files(request: GitItem):
+    git_path = request.repoPath
+
+    try:
+        repo = Repo(git_path)
+
+        try:
+            commit = repo.commit(request.commit_checksum)
+        except:
+            raise HTTPException(status_code=404, detail="Commit not found")
+        
+        changed_files = []
+
+        if commit.parents:
+            diff_index = commit.parents[0].diff(commit)
+        else:
+            diff_index = commit.diff(NULL_TREE)
+        
+        # it recognize type only A / D / M
+        for diff in diff_index:
+            if diff.change_type == 'A':
+                changed_files.append({
+                    "file_name": os.path.basename(diff.b_path),
+                    "change_type": "added"
+                })
+            elif diff.change_type == 'D':
+                changed_files.append({
+                    "file_name": os.path.basename(diff.a_path),
+                    "change_type": "deleted"
+                })
+            elif diff.change_type == 'M':
+                changed_files.append({
+                    "file_name": os.path.basename(diff.a_path),
+                    "change_type": "modified"
+                })
+
+        return changed_files
+    
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# this api recognize files in type added / removed / modified
+# but we can think the file type renamed ( copy ? )
+
+# changed files have elements > ('file_name', 'change_type')
+
+# this api also only recognize mainline branch
+# but we can choose branch and parameter branch or parent checksum
+# if get branch > branch and parent checksum matching 
+# if get parent checksum > if not initial commit, we can replace it
+
+
+@app.get("/api/changed_data")
+def get_changed_data(request: GitItem):
+    git_path = request.repoPath
+    file_path = request.path
+
+    try:
+        repo = Repo(git_path)
+
+        try:
+            commit = repo.commit(request.commit_checksum)
+        except:
+            raise HTTPException(status_code=404, detail="Commit not found")
+        
+        if commit.parents:
+             diff_index = commit.parents[0].diff(commit)
+        else:
+            diff_index = commit.diff(NULL_TREE)
+        
+        diff_info = []
+
+        # get path about git root repository
+        path = os.path.relpath(file_path, repo.working_tree_dir).replace("\\", "/")
+        for diff in diff_index:
+            if diff.a_path == path or diff.b_path == path:
+                diff_info.append({
+                    'change_type': diff.change_type,
+                    "added_lines": diff.b_blob.data_stream.read().decode().split("\n") if diff.b_blob is not None else [],
+                    "removed_lines": diff.a_blob.data_stream.read().decode().split("\n") if diff.a_blob is not None else [],
+                })
+        
+        if not diff_info:
+            raise HTTPException(status_code=404, detail="File not found in the commit")
+        
+        return diff_info
+    
+    except GitCommandError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# parameter : repoPath and filePath
+
+# commit.diff(NULL_TREE) is for first commit >> all codes are changes
+# first commit : a_path == None
+
+# a_path : file path for parent commit & b_path : file path for current commit
+
+# change_type: 'A' : add & 'D' : remove & 'M' : modified & 'R' : renamed & 'C' : copy
+# line changes : before changes > removed_lines & after changes > added_lines
+# add_lines and removed_lines are list for change strings
+
+# this api show information based on main line branch
+# so, if you see changed information based on merged branch
+# > we can change diff_index = commit.parents[0].diff(commit)
+# > to diff_index = commit.parents[1 or 2 ...].diff(commit)
+
+# this case, parameter need commit_checksum > checksum == commit.parents[0] or not
+
+# we must have more error handling codes
+>>>>>>> feature3_api
