@@ -5,7 +5,7 @@ import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
 import axios from 'axios';
-import { Graph } from "react-d3-graph";
+import * as d3 from 'd3';
 
 const NameWrapper = styled.div`
   display: flex;
@@ -971,7 +971,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       if (response.status !== 200) {
         throw new Error(`API request failed with status ${response.status}`);
       }
-  
+      console.log(response.data);
       return response.data;
     } catch (error) {
       console.error("Error fetching git history:", error);
@@ -982,11 +982,20 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   const openHistoryModal = async () => {
     const data = await fetchGitHistory(await getGitRootPath());
     setHistoryList(data);
+    drawHistoryGraph();
     setVisible(true);
   }
   
   const closeHistoryModal = () => {
     setVisible(false);
+  }
+
+
+  async function drawHistoryGraph() {
+    const data = await fetchGitHistory(await getGitRootPath());
+    console.log(`Total count: ${data.length}`);
+
+    
   }
   
   const historyColumns = [
