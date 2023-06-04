@@ -646,6 +646,7 @@ async def get_git_history(request: FileItem):
                 'commit_message': commit.message, 
                 'branches': branch_names,
                 'author': commit.author.name,  # string type
+                'email': commit.author.email  # string type
                 # 'date': datetime.datetime.fromtimestamp(
                 #    commit.authored_datetime).strftime("%Y-%m-%d %H:%M:%S")
             }
