@@ -5,6 +5,7 @@ import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
 import axios from 'axios';
+import { Graph } from "react-d3-graph";
 
 const NameWrapper = styled.div`
   display: flex;
@@ -989,8 +990,8 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   }
   
   const historyColumns = [
-    { title: 'Commit Checksum', dataIndex: 'commit_checksum', key: 'commit_checksum' },
     { title: 'Author', dataIndex: 'author', key: 'author' },
+    { title: 'Commit message', dataIndex: 'commit_message', key: 'commit_message' },
     // add other fields as needed
   ];
   
