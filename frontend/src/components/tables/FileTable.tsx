@@ -995,6 +995,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     commit_message: string;
     branches: string[];
     author: string;
+    email: string;
   };
   
   type GitGraphProps = {
@@ -1002,13 +1003,15 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   };
   
   const GitGraph: React.FC<GitGraphProps> = ({ historyList }) => {
+    // 중복 제거를 위한 Set을 사용하여 고유한 커밋 식별자 저장
+    const uniqueCommits = new Set();
+  
     return (
       <Gitgraph options={{
         template: templateExtend(TemplateName.Metro, {
           commit: { message: { displayAuthor: true } },
         }),
       }}>
-
         {(gitgraph) => {
           let branchMap: { [key: string]: any } = {};
   
@@ -1023,11 +1026,19 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
           for (let commitData of historyList) {
             for (let branch of commitData.branches) {
               const uniqueKey = `${commitData.commit_checksum}-${branch}`;
+              
+              // 중복된 커밋이면 건너뛰기
+              if (uniqueCommits.has(uniqueKey)) {
+                continue;
+              }
+              
               branchMap[branch].commit({
-                hash: uniqueKey,
-                commit_message: commitData.commit_message,
-                author: commitData.author,
+                hash: commitData.commit_checksum,
+                subject: commitData.commit_message,
+                author: `${commitData.author} <${commitData.email}>`,
               });
+  
+              uniqueCommits.add(uniqueKey); // 고유한 커밋 식별자 저장
             }
           }
         }}
