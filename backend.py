@@ -769,24 +769,22 @@ def get_changed_data(request: FileItem):
     
 
 #feature 4 : git clone
-@app.post("/api/clone_and_check_status")
-async def clone_and_check_status(request: FileItem):
-    path = request.path
+# 링크 받아서 repo check
+@app.get("/api/repo_status")
+async def get_repo_status(request: FileItem):
     clone_link = request.remote_path
     access_token = request.access_token
 
     headers = {
         'Authorization': f'token {access_token}',
-    }
+    } if access_token else {}
 
     try:
-        # check repo_status
         response = requests.get(clone_link, headers=headers)
 
         if response.status_code == 200:
-            # 레포가 퍼블릭이거나 access_token이 일치한다면 clone 진행
-            Repo.clone_from(clone_link, path, env={'GIT_ASKPASS': 'echo', 'GIT_USERNAME': 'git', 'GIT_PASSWORD': access_token})
-            return {"message": "Clone Successfully"}
+            data = response.json()
+            return {"status": "private" if data['private'] else "public"}
         elif response.status_code == 404:
             return {'error': 'Repository does not exist or not access have'}
         else:
@@ -794,21 +792,18 @@ async def clone_and_check_status(request: FileItem):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    # Repo.clone(url, path)
-# > clone in url to path
-    
 
-@app.get("/repo/{user}/{repo}")
-async def read_repo(user: str, repo: str):
-    url = f"https://api.github.com/repos/{user}/{repo}"
-    response = requests.get(url)
 
-    if response.status_code == 200:
-        data = response.json()
-        if data['private'] is True:
-            return {"message": "This repository is private."}
-        else:
-            return {"message": "This repository is public."}
-    else:
-        raise HTTPException(status_code=404, detail="Repository not found")
+@app.post("/api/clone_repo")
+async def clone_repo(request: FileItem):
+    path = request.path
+    clone_link = request.remote_path
+    access_token = request.access_token
 
+    try:
+        # Clone the repository
+        Repo.clone_from(clone_link, path, env={'GIT_ASKPASS': 'echo', 'GIT_USERNAME': 'git', 'GIT_PASSWORD': access_token} if access_token else None)
+        return {"message": "Repository cloned successfully."}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
