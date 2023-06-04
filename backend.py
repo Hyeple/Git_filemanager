@@ -622,7 +622,7 @@ async def branch_merge(request: FileItem):
 
 
 # feature 3 : git history
-@app.get("api/git_history")
+@app.post("/api/git_history")
 async def get_git_history(request: FileItem):
     git_path = request.git_path
     # branch_name = request.branch_name ( if sorting by selected branch for graph )
@@ -641,20 +641,21 @@ async def get_git_history(request: FileItem):
             
             # we may need more information about commit for making history tree
             commit_info = {
-                'commit_checksum': commit.hexsha, # string type
+                'commit_checksum': commit.hexsha,  # string type
                 'parent_checksums': [parent.hexsha for parent in commit.parents],
                 'commit_message': commit.message, 
                 'branches': branch_names,
-                'author': commit.author.name, # string type
-                #'date': datetime.datetime.fromtimestamp(
+                'author': commit.author.name,  # string type
+                # 'date': datetime.datetime.fromtimestamp(
                 #    commit.authored_datetime).strftime("%Y-%m-%d %H:%M:%S")
             }
-            history_list.apeend(commit_info)
+            history_list.append(commit_info)
         
         return history_list
     
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.get("/api/commit_information")
