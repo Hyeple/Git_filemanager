@@ -960,7 +960,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   ];
 
   
-  //왜 피쳐3은 계속 오류가 발생하는가?
   const [visible, setVisible] = useState(false);
   const [historyList, setHistoryList] = useState([]);
 
@@ -1033,12 +1032,13 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
               }
               
               branchMap[branch].commit({
-                hash: commitData.commit_checksum,
+                hash: `${commitData.commit_checksum}${branch}}`, 
                 subject: commitData.commit_message,
                 author: `${commitData.author} <${commitData.email}>`,
               });
   
               uniqueCommits.add(uniqueKey); // 고유한 커밋 식별자 저장
+              //console.log(uniqueCommits);
             }
           }
         }}
