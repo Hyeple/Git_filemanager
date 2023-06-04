@@ -1008,17 +1008,19 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const uniqueCommits = new Set();
   
     return (
-      <div style={{ width: '200px', height: '300px' }}> {/* 그래프의 크기를 조정 */}
+      <div style={{ width: '200px', height: '300px' }}> {}
         <Gitgraph options={{
           template: templateExtend(TemplateName.Metro, {
+            colors: ['#0099FF'],
             branch: {
               label: {
-                font: '16px Arial', // 브랜치 레이블 폰트 크기 조정
+                font: '18px', // 브랜치 레이블 폰트
               },
             },
             commit: {
               message: {
-                font: '16px Arial', // 커밋 메시지 폰트 크기 조정
+                color : '#000000',
+                font: '18px', // 커밋 메시지 폰트
               },
             },
           }),
