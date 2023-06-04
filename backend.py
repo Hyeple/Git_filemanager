@@ -659,7 +659,7 @@ async def get_git_history(request: FileItem):
 
 
 
-@app.get("/api/commit_information")
+@app.post("/api/commit_information")
 async def get_commit_information(request:FileItem):
     git_path = request.git_path
 
@@ -677,8 +677,7 @@ async def get_commit_information(request:FileItem):
             'parent_checksums': [parent.hexsha for parent in commit.parents],
             'author': commit.author.name,
             'commiter': commit.committer.name,
-            'date': datetime.datetime.fromtimestamp(
-                commit.authored_datetime).strftime("%Y-%m-%d %H:%M:%S")
+            'date': commit.authored_datetime.strftime("%Y-%m-%d %H:%M:%S")
         }
 
         return commit_info
@@ -687,7 +686,7 @@ async def get_commit_information(request:FileItem):
         raise HTTPException(status_code=500, detail=str(e))
     
 
-@app.get("/api/changed_files")
+@app.post("/api/changed_files")
 def get_changed_files(request: FileItem):
     git_path = request.git_path
 
@@ -725,46 +724,6 @@ def get_changed_files(request: FileItem):
                 })
 
         return changed_files
-    
-    except GitCommandError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-
-@app.get("/api/changed_data")
-def get_changed_data(request: FileItem):
-    git_path = request.git_path
-    file_path = request.path
-
-    try:
-        # open git repo
-        repo = Repo(git_path)
-
-        try:
-            commit = repo.commit(request.commit_checksum)
-        except:
-            raise HTTPException(status_code=404, detail="Commit not found")
-        
-        if commit.parents:
-             diff_index = commit.parents[0].diff(commit)
-        else:
-            diff_index = commit.diff(NULL_TREE)
-        
-        diff_info = []
-
-        # get path about git root repository
-        path = os.path.relpath(file_path, repo.working_tree_dir).replace("\\", "/")
-        for diff in diff_index:
-            if diff.a_path == path or diff.b_path == path:
-                diff_info.append({
-                    'change_type': diff.change_type,
-                    "added_lines": diff.b_blob.data_stream.read().decode().split("\n") if diff.b_blob is not None else [],
-                    "removed_lines": diff.a_blob.data_stream.read().decode().split("\n") if diff.a_blob is not None else [],
-                })
-        
-        if not diff_info:
-            raise HTTPException(status_code=404, detail="File not found in the commit")
-        
-        return diff_info
     
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
