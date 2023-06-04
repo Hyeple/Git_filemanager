@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Modal, Button, Table, Tooltip, Input, message, Breadcrumb, Drawer } from "antd";
+import { Modal, Button, Table, Tooltip, Input, message, Breadcrumb, Drawer, Popover } from "antd";
 import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined, CheckOutlined, SendOutlined, MergeCellsOutlined, HistoryOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
@@ -962,6 +962,9 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [historyList, setHistoryList] = useState([]);
+  const [commitInfo, setCommitInfo] = useState(null);
+  const [changedInfo, setChangedInfo] = useState(null);
+
   
 
   async function fetchGitHistory(gitPath: string) {
@@ -988,7 +991,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   const closeHistoryDrawer = () => {
     setDrawerVisible(false);
   }
-  
 
   type CommitData = {
     commit_checksum: string;
@@ -1006,6 +1008,28 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   const GitGraph: React.FC<GitGraphProps> = ({ historyList }) => {
     // 중복 제거를 위한 Set을 사용하여 고유한 커밋 식별자 저장
     const uniqueCommits = new Set();
+
+    const getCommitInfo = async (checksum: string) => {
+      try {
+          const gitPath = await getGitRootPath();
+          const response = await axios.post('/api/commit_information', { git_path: gitPath, commit_checksum : checksum });
+          //console.log(response.data);
+          return response.data;
+      } catch (error) {
+          console.error(error);
+      }
+   };
+
+   const getCommitChangedInfo = async (checksum: string) => {
+    try {
+        const gitPath = await getGitRootPath();
+        const response = await axios.post('/api/changed_files', { git_path: gitPath, commit_checksum : checksum });
+        //console.log(response.data);
+        return response.data;
+    } catch (error) {
+        console.error(error);
+    }
+  };
   
     return (
       <div style={{ width: '200px', height: '300px' }}> {}
@@ -1032,15 +1056,19 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
             for (let i = historyList.length - 1; i >= 0; i--) {
               const commitData = historyList[i];
               if (commitData.branches.includes(activeBranch)) { // 활성화된 브랜치의 커밋만 표시
-                const uniqueKey = `${commitData.commit_checksum}-${activeBranch}`;
+                const uniqueKey = `${commitData.commit_checksum}`;
   
                 if (!uniqueCommits.has(uniqueKey)) {
                   branchMap[activeBranch].commit({
-                    hash: `${commitData.commit_checksum}${activeBranch}`,
+                    hash: `${commitData.commit_checksum}`,
                     subject: commitData.commit_message,
                     author: `${commitData.author} <${commitData.email}>`,
-                  });
-  
+                    onMessageClick: () => {
+                      //console.log(commitData.commit_checksum);
+                      getCommitInfo(commitData.commit_checksum);
+                      getCommitChangedInfo(commitData.commit_checksum);
+                  }
+              });
                   uniqueCommits.add(uniqueKey);
                 }
               }
