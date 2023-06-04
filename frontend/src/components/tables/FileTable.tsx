@@ -5,7 +5,7 @@ import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
 import { getFileSize } from "../../utils/number";
 import axios from 'axios';
-import * as d3 from 'd3';
+import { Gitgraph, templateExtend, TemplateName } from "@gitgraph/react"; 
 
 const NameWrapper = styled.div`
   display: flex;
@@ -982,7 +982,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   const openHistoryModal = async () => {
     const data = await fetchGitHistory(await getGitRootPath());
     setHistoryList(data);
-    drawHistoryGraph();
     setVisible(true);
   }
   
@@ -990,20 +989,51 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     setVisible(false);
   }
 
-
-  async function drawHistoryGraph() {
-    const data = await fetchGitHistory(await getGitRootPath());
-    console.log(`Total count: ${data.length}`);
-
-    
-  }
+  type CommitData = {
+    commit_checksum: string;
+    parent_checksums: string[];
+    commit_message: string;
+    branches: string[];
+    author: string;
+  };
   
-  const historyColumns = [
-    { title: 'Author', dataIndex: 'author', key: 'author' },
-    { title: 'Commit message', dataIndex: 'commit_message', key: 'commit_message' },
-    // add other fields as needed
-  ];
+  type GitGraphProps = {
+    historyList: CommitData[];
+  };
   
+  const GitGraph: React.FC<GitGraphProps> = ({ historyList }) => {
+    return (
+      <Gitgraph options={{
+        template: templateExtend(TemplateName.Metro, {
+          commit: { message: { displayAuthor: true } },
+        }),
+      }}>
+
+        {(gitgraph) => {
+          let branchMap: { [key: string]: any } = {};
+  
+          for (let commitData of historyList) {
+            for (let branch of commitData.branches) {
+              if (!(branch in branchMap)) {
+                branchMap[branch] = gitgraph.branch(branch);
+              }
+            }
+          }
+  
+          for (let commitData of historyList) {
+            for (let branch of commitData.branches) {
+              const uniqueKey = `${commitData.commit_checksum}-${branch}`;
+              branchMap[branch].commit({
+                hash: uniqueKey,
+                commit_message: commitData.commit_message,
+                author: commitData.author,
+              });
+            }
+          }
+        }}
+      </Gitgraph>
+    );
+  };
   
   
   
@@ -1216,12 +1246,8 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       onCancel={closeHistoryModal}
       footer={null}
     >
-      <Table
-        columns={historyColumns}
-        dataSource={historyList}
-        pagination={false}
-        scroll={{ y: 300 }}
-      />
+      <GitGraph historyList={historyList} />
+
     </Modal>
 
 

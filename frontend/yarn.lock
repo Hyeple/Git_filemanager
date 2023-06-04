@@ -1301,7 +1301,7 @@
   resolved "https://registry.npmjs.org/@eslint/js/-/js-8.39.0.tgz"
   integrity sha512-kf9RB0Fg7NZfap83B3QOqOGg9QmD9yBudqQXzzOtn3i4y7ZUXe5ONeW34Gwi+TxhH4mvj72R1Zc300KUMa9Bng==
 
-"@gitgraph/core@1.5.0":
+"@gitgraph/core@^1.5.0", "@gitgraph/core@1.5.0":
   version "1.5.0"
   resolved "https://registry.npmjs.org/@gitgraph/core/-/core-1.5.0.tgz"
   integrity sha512-8CeeHbkKoFHM1y9vfjYiHyEpzl1mEhVrg5c/eFgDBsntOYswoDKU2yOf6DjtVINcE60wmcuynBSJqjMkQo07Ww==
