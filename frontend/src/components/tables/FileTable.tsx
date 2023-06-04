@@ -962,6 +962,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   
   const [visible, setVisible] = useState(false);
   const [historyList, setHistoryList] = useState([]);
+  
 
   async function fetchGitHistory(gitPath: string) {
     try {
@@ -1006,45 +1007,49 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const uniqueCommits = new Set();
   
     return (
-      <Gitgraph options={{
-        template: templateExtend(TemplateName.Metro, {
-          commit: { message: { displayAuthor: true } },
-        }),
-      }}>
-        {(gitgraph) => {
-          let branchMap: { [key: string]: any } = {};
+      <div style={{ width: '200px', height: '300px' }}> {/* 그래프의 크기를 조정 */}
+        <Gitgraph options={{
+          template: templateExtend(TemplateName.Metro, {
+            branch: {
+              label: {
+                font: '14px Arial', // 브랜치 레이블 폰트 크기 조정
+              },
+            },
+            commit: {
+              message: {
+                font: '14px Arial', // 커밋 메시지 폰트 크기 조정
+              },
+            },
+          }),
+        }}>
+          {(gitgraph) => {
+            let branchMap: { [key: string]: any } = {};
+            branchMap[activeBranch] = gitgraph.branch(activeBranch); // 현재 활성화된 브랜치만 그래프에 추가
   
-          for (let commitData of historyList) {
-            for (let branch of commitData.branches) {
-              if (!(branch in branchMap)) {
-                branchMap[branch] = gitgraph.branch(branch);
+            for (let i = historyList.length - 1; i >= 0; i--) {
+              const commitData = historyList[i];
+              if (commitData.branches.includes(activeBranch)) { // 활성화된 브랜치의 커밋만 표시
+                const uniqueKey = `${commitData.commit_checksum}-${activeBranch}`;
+  
+                if (!uniqueCommits.has(uniqueKey)) {
+                  branchMap[activeBranch].commit({
+                    hash: `${commitData.commit_checksum}${activeBranch}`,
+                    subject: commitData.commit_message,
+                    author: `${commitData.author} <${commitData.email}>`,
+                  });
+  
+                  uniqueCommits.add(uniqueKey);
+                }
               }
             }
-          }
-  
-          for (let commitData of historyList) {
-            for (let branch of commitData.branches) {
-              const uniqueKey = `${commitData.commit_checksum}-${branch}`;
-              
-              // 중복된 커밋이면 건너뛰기
-              if (uniqueCommits.has(uniqueKey)) {
-                continue;
-              }
-              
-              branchMap[branch].commit({
-                hash: `${commitData.commit_checksum}${branch}}`, 
-                subject: commitData.commit_message,
-                author: `${commitData.author} <${commitData.email}>`,
-              });
-  
-              uniqueCommits.add(uniqueKey); // 고유한 커밋 식별자 저장
-              //console.log(uniqueCommits);
-            }
-          }
-        }}
-      </Gitgraph>
+          }}
+        </Gitgraph>
+      </div>
     );
   };
+  
+  
+  
   
   
   
@@ -1256,10 +1261,12 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       visible={visible}
       onCancel={closeHistoryModal}
       footer={null}
+      width = {1200}
     >
+      <br/>
       <GitGraph historyList={historyList} />
-
     </Modal>
+
 
 
     </>
