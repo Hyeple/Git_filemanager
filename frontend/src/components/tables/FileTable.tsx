@@ -957,6 +957,43 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       ),
     },
   ];
+
+  
+  //왜 피쳐3은 계속 오류가 발생하는가?
+  const [visible, setVisible] = useState(false);
+  const [historyList, setHistoryList] = useState([]);
+
+  async function fetchGitHistory(gitPath: string) {
+    try {
+      const response = await axios.post("/api/git_history", { git_path: gitPath });
+      
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+  
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching git history:", error);
+      return null;
+    }
+  }
+
+  const openHistoryModal = async () => {
+    const data = await fetchGitHistory(await getGitRootPath());
+    setHistoryList(data);
+    setVisible(true);
+  }
+  
+  const closeHistoryModal = () => {
+    setVisible(false);
+  }
+  
+  const historyColumns = [
+    { title: 'Commit Checksum', dataIndex: 'commit_checksum', key: 'commit_checksum' },
+    { title: 'Author', dataIndex: 'author', key: 'author' },
+    // add other fields as needed
+  ];
+  
   
   
   
@@ -1024,7 +1061,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     <br/>
       
     {!checkGitTypes() && (<Button
-        onClick={openBranchModal}
+        onClick={openHistoryModal}
         style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
       >
         <HistoryOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> git commit history
@@ -1162,6 +1199,21 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
             pagination={false} />
         </div>
     </Modal>
+
+    <Modal
+      title="Git Commit History"
+      visible={visible}
+      onCancel={closeHistoryModal}
+      footer={null}
+    >
+      <Table
+        columns={historyColumns}
+        dataSource={historyList}
+        pagination={false}
+        scroll={{ y: 300 }}
+      />
+    </Modal>
+
 
     </>
   );
