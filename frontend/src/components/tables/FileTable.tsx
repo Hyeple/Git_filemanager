@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Modal, Button, Table, Tooltip, Input, message, Breadcrumb } from "antd";
+import { Modal, Button, Table, Tooltip, Input, message, Breadcrumb, Drawer } from "antd";
 import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined, CheckOutlined, SendOutlined, MergeCellsOutlined, HistoryOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
@@ -960,7 +960,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   ];
 
   
-  const [visible, setVisible] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [historyList, setHistoryList] = useState([]);
   
 
@@ -979,15 +979,16 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     }
   }
 
-  const openHistoryModal = async () => {
+  const openHistoryDrawer = async () => {
     const data = await fetchGitHistory(await getGitRootPath());
     setHistoryList(data);
-    setVisible(true);
+    setDrawerVisible(true);
   }
   
-  const closeHistoryModal = () => {
-    setVisible(false);
+  const closeHistoryDrawer = () => {
+    setDrawerVisible(false);
   }
+  
 
   type CommitData = {
     commit_checksum: string;
@@ -1012,12 +1013,12 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
           template: templateExtend(TemplateName.Metro, {
             branch: {
               label: {
-                font: '14px Arial', // 브랜치 레이블 폰트 크기 조정
+                font: '16px Arial', // 브랜치 레이블 폰트 크기 조정
               },
             },
             commit: {
               message: {
-                font: '14px Arial', // 커밋 메시지 폰트 크기 조정
+                font: '16px Arial', // 커밋 메시지 폰트 크기 조정
               },
             },
           }),
@@ -1117,7 +1118,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     <br/>
       
     {!checkGitTypes() && (<Button
-        onClick={openHistoryModal}
+        onClick={openHistoryDrawer}
         style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
       >
         <HistoryOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> git commit history
@@ -1255,17 +1256,18 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
             pagination={false} />
         </div>
     </Modal>
-
-    <Modal
+    
+    <Drawer
       title="Git Commit History"
-      visible={visible}
-      onCancel={closeHistoryModal}
-      footer={null}
-      width = {1200}
+      placement="left"
+      closable={false}
+      onClose={closeHistoryDrawer}
+      visible={drawerVisible}
+      width={1200}
+      bodyStyle={{ overflow: 'auto', height: 'calc(100vh - 108px)', padding: '24px' }}
     >
-      <br/>
       <GitGraph historyList={historyList} />
-    </Modal>
+    </Drawer>
 
 
 
