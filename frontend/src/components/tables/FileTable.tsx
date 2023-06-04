@@ -962,9 +962,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [historyList, setHistoryList] = useState([]);
-  const [commitInfo, setCommitInfo] = useState(null);
-  const [changedInfo, setChangedInfo] = useState(null);
-
   
 
   async function fetchGitHistory(gitPath: string) {
@@ -1009,30 +1006,47 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     // 중복 제거를 위한 Set을 사용하여 고유한 커밋 식별자 저장
     const uniqueCommits = new Set();
 
+    const [popoverVisible, setPopoverVisible] = useState(false);
+    const [commitInfo, setCommitInfo] = useState(null);
+    const [commitChangedInfo, setCommitChangedInfo] = useState(null);
+  
+    const handleCommitClick = async (checksum: string) => {
+      const commitInfoResponse = await getCommitInfo(checksum);
+      const commitChangedInfoResponse = await getCommitChangedInfo(checksum);
+  
+      setCommitInfo(commitInfoResponse);
+      setCommitChangedInfo(commitChangedInfoResponse);
+      setPopoverVisible(true);
+    };
+  
+    const hidePopover = () => {
+      setPopoverVisible(false);
+    };
+
     const getCommitInfo = async (checksum: string) => {
       try {
           const gitPath = await getGitRootPath();
           const response = await axios.post('/api/commit_information', { git_path: gitPath, commit_checksum : checksum });
-          //console.log(response.data);
           return response.data;
       } catch (error) {
           console.error(error);
       }
-   };
-
-   const getCommitChangedInfo = async (checksum: string) => {
-    try {
-        const gitPath = await getGitRootPath();
-        const response = await axios.post('/api/changed_files', { git_path: gitPath, commit_checksum : checksum });
-        //console.log(response.data);
-        return response.data;
-    } catch (error) {
-        console.error(error);
-    }
-  };
+    };
+    
+    const getCommitChangedInfo = async (checksum: string) => {
+      try {
+          const gitPath = await getGitRootPath();
+          const response = await axios.post('/api/changed_files', { git_path: gitPath, commit_checksum : checksum });
+          return response.data;
+      } catch (error) {
+          console.error(error);
+      }
+    };
   
     return (
       <div style={{ width: '200px', height: '300px' }}> {}
+
+
         <Gitgraph options={{
           template: templateExtend(TemplateName.Metro, {
             colors: ['#0099FF'],
@@ -1064,9 +1078,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
                     subject: commitData.commit_message,
                     author: `${commitData.author} <${commitData.email}>`,
                     onMessageClick: () => {
-                      //console.log(commitData.commit_checksum);
-                      getCommitInfo(commitData.commit_checksum);
-                      getCommitChangedInfo(commitData.commit_checksum);
+                      handleCommitClick(commitData.commit_checksum)
                   }
               });
                   uniqueCommits.add(uniqueKey);
@@ -1075,6 +1087,20 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
             }
           }}
         </Gitgraph>
+
+        <Popover
+          placement = "right"
+          content={
+            <>
+              <div>Commit Info: {JSON.stringify(commitInfo)}</div>
+              <div>Commit Changed Info: {JSON.stringify(commitChangedInfo)}</div>
+            </>
+          }
+          title="Commit Details"
+          trigger="click"
+          visible={popoverVisible}
+          onVisibleChange={hidePopover}
+        ></Popover>
       </div>
     );
   };
