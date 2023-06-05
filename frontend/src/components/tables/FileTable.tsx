@@ -91,7 +91,7 @@ interface FileTableProps {
 async function fetchFiles(path: string) {
   try {
     const encodedPath = encodeURIComponent(path);
-    const response = await axios.get(`/api/root_files?path=${encodedPath}`, {
+    const response = await axios.get(`http://localhost:8000/api/root_files?path=${encodedPath}`, {
       withCredentials: true,
     });
 
@@ -309,7 +309,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     setFileList(files as FileTableDataType[]);
   
   // Push the current path to the backend
-    await axios.post("/api/push_path", { path }, {
+    await axios.post("http://localhost:8000/api/push_path", { path }, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -352,7 +352,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const newPath = onPathChange(newPathStack[newPathStack.length - 1]);
   
     path = newPath;
-    axios.post("/api/init_repo", { path: newPath.toString() }, {
+    axios.post("http://localhost:8000/api/init_repo", { path: newPath.toString() }, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -385,7 +385,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
         throw new Error("Git root path not found");
       }
   
-      const response = await axios.post("/api/git_commit", {
+      const response = await axios.post("http://localhost:8000/api/git_commit", {
         git_path: gitRootPath,
         commit_message: newName,
         file_paths: stagedFiles.map(file => file.name.fileName),
@@ -422,7 +422,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   
   const getGitRootPath = async () => {
     try {
-      const response = await axios.post("/api/git_root_path", { path }, {
+      const response = await axios.post("http://localhost:8000/api/git_root_path", { path }, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -454,7 +454,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
         throw new Error("Git root path not found");
       }
 
-      const response = await axios.post("/api/get_staged_files", { path: gitRootPath }, {
+      const response = await axios.post("http://localhost:8000/api/get_staged_files", { path: gitRootPath }, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -489,7 +489,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const git_repository_path = await getGitRootPath();
     try {
       const response = await axios.post(
-        "/api/git_add",
+        "http://localhost:8000/api/git_add",
         { git_path: git_repository_path, file_path: filePath },
         {
           headers: {
@@ -521,7 +521,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const git_repository_path = await getGitRootPath();
     try {
       const response = await axios.post(
-        "/api/git_restore_staged",
+        "http://localhost:8000/api/git_restore_staged",
         { git_path: git_repository_path, file_path: filePath },
         {
           headers: {
@@ -553,7 +553,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const git_repository_path = await getGitRootPath();
     try {
       const response = await axios.post(
-        "/api/git_undo_modify",
+        "http://localhost:8000/api/git_undo_modify",
         { git_path: git_repository_path, file_path: filePath },
         {
           headers: {
@@ -585,7 +585,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const git_repository_path = await getGitRootPath();
     try {
       const response = await axios.post(
-        "/api/git_remove_cached",
+        "http://localhost:8000/api/git_remove_cached",
         { git_path: git_repository_path, file_path: filePath },
         {
           headers: {
@@ -617,7 +617,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const git_repository_path = await getGitRootPath();
     try {
       const response = await axios.post(
-        "/api/git_remove",
+        "http://localhost:8000/api/git_remove",
         { git_path: git_repository_path, file_path: filePath },
         {
           headers: {
@@ -749,7 +749,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     }
     
     try {
-      await axios.post(`/api/branch_create`, {
+      await axios.post(`http://localhost:8000/api/branch_create`, {
         git_path: await getGitRootPath(),
         branch_name: newBranchName
       });
@@ -763,7 +763,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   // 브랜치 목록을 가져온다
   const fetchBranches = async () => {
     try {
-      const response = await axios.post(`/api/branche_get`, {
+      const response = await axios.post(`http://localhost:8000/api/branche_get`, {
         git_path: await getGitRootPath()
       });
       if (response.status === 200) {
@@ -779,7 +779,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   // Fetch active branch
   const fetchActiveBranch = async () => {
     try {
-      const response = await axios.post(`/api/curbranch_get`, {
+      const response = await axios.post(`http://localhost:8000/api/curbranch_get`, {
         git_path: await getGitRootPath()
       });
   
@@ -800,7 +800,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   // 체크아웃을 수행하는 API 호출
   async function checkoutBranch(gitPath: string, branchName: string) {
     try {
-      const response = await axios.post(`/api/branch_checkout`, {
+      const response = await axios.post(`http://localhost:8000/api/branch_checkout`, {
         git_path: gitPath,
         branch_name: branchName
       });
@@ -824,7 +824,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     // 브랜치를 삭제한다
   const handleDeleteBranch = async (branchName: string) => {
     try {
-      await axios.post(`/api/branch_delete`, {
+      await axios.post(`http://localhost:8000/api/branch_delete`, {
         git_path: await getGitRootPath(),
         branch_name: branchName
       });
@@ -838,7 +838,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   // 브랜치 이름을 변경한다
   async function renameBranch(gitPath: string, oldName: string, newName: string) {
     try {
-      const response = await axios.post(`/api/branch_rename`, {
+      const response = await axios.post(`http://localhost:8000/api/branch_rename`, {
         git_path: gitPath,
         old_branch_name: oldName,
         new_branch_name: newName
@@ -862,7 +862,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   //피쳐2를 해볼까요~~~
   async function mergeBranch(gitPath: string, targetBranch: string) {
     try {
-        const response = await axios.post(`/api/branch_merge`, {
+        const response = await axios.post(`http://localhost:8000/api/branch_merge`, {
             git_path: gitPath,
             branch_name: targetBranch
         });
@@ -966,7 +966,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
   async function fetchGitHistory(gitPath: string) {
     try {
-      const response = await axios.post("/api/git_history", { git_path: gitPath });
+      const response = await axios.post("http://localhost:8000/api/git_history", { git_path: gitPath });
       
       if (response.status !== 200) {
         throw new Error(`API request failed with status ${response.status}`);
@@ -1026,7 +1026,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const getCommitInfo = async (checksum: string) => {
       try {
           const gitPath = await getGitRootPath();
-          const response = await axios.post('/api/commit_information', { git_path: gitPath, commit_checksum : checksum });
+          const response = await axios.post('http://localhost:8000/api/commit_information', { git_path: gitPath, commit_checksum : checksum });
           return response.data;
       } catch (error) {
           console.error(error);
@@ -1036,7 +1036,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const getCommitChangedInfo = async (checksum: string) => {
       try {
           const gitPath = await getGitRootPath();
-          const response = await axios.post('/api/changed_files', { git_path: gitPath, commit_checksum : checksum });
+          const response = await axios.post('http://localhost:8000/api/changed_files', { git_path: gitPath, commit_checksum : checksum });
           return response.data;
       } catch (error) {
           console.error(error);
@@ -1198,7 +1198,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
             ? `${path}/${fileToRename.fileName}`.replace(fileToRename.fileName, newName) 
             : '';
         
-          await axios.post(`/api/git_move`, { 
+          await axios.post(`http://localhost:8000/api/git_move`, { 
             git_path: await getGitRootPath(),
             old_file_path: fileToRename ? `${path}/${fileToRename.fileName}` : '', 
             new_file_path: newPath
