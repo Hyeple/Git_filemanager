@@ -1001,14 +1001,29 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   type GitGraphProps = {
     historyList: CommitData[];
   };
+
+  type CommitInfoType = {
+    commit_checksum: string;
+    parent_checksums: string[];
+    author: string;
+    commiter: string;
+    date: string;
+    email : string;
+    commit_message : string;
+  };
   
+  type FileChangeType = {
+    file_name: string;
+    change_type: string;
+  };
+
   const GitGraph: React.FC<GitGraphProps> = ({ historyList }) => {
     // 중복 제거를 위한 Set을 사용하여 고유한 커밋 식별자 저장
     const uniqueCommits = new Set();
 
     const [popoverVisible, setPopoverVisible] = useState(false);
-    const [commitInfo, setCommitInfo] = useState(null);
-    const [commitChangedInfo, setCommitChangedInfo] = useState(null);
+    const [commitInfo, setCommitInfo] = useState<CommitInfoType | null>(null);
+    const [commitChangedInfo, setCommitChangedInfo] = useState<FileChangeType[] | null>(null);
   
     const handleCommitClick = async (checksum: string) => {
       const commitInfoResponse = await getCommitInfo(checksum);
@@ -1042,7 +1057,8 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
           console.error(error);
       }
     };
-  
+
+
     return (
       <div style={{ width: '200px', height: '300px' }}> {}
 
@@ -1088,27 +1104,46 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
           }}
         </Gitgraph>
 
-        <Popover
-          placement = "right"
-          content={
-            <>
-              <div>Commit Info: {JSON.stringify(commitInfo)}</div>
-              <div>Commit Changed Info: {JSON.stringify(commitChangedInfo)}</div>
-            </>
-          }
-          title="Commit Details"
-          trigger="click"
+        
+
+        <Modal
+          title={`Commit Information`}
           visible={popoverVisible}
-          onVisibleChange={hidePopover}
-        ></Popover>
+          onOk={hidePopover}
+          onCancel={hidePopover}
+          footer={null}
+        >
+        <hr/>
+
+          {commitInfo && (
+            <>
+              <p><strong>commit  </strong> {commitInfo.commit_checksum}</p>
+              <p><strong>Author:</strong> {commitInfo.author}</p>
+              <p><strong>Email:</strong> {commitInfo.email}</p>
+              <p><strong>Date:</strong> {commitInfo.date}</p>
+              <br/>
+              <p><strong>Message:</strong> {commitInfo.commit_message}</p>
+            </>
+          )}
+
+          {commitChangedInfo && (
+            <>
+              {commitChangedInfo.map((file, index) => (
+                <p key={index}><strong>{file.change_type} : </strong> {file.file_name}</p>
+              ))}
+            </>
+          )}
+
+
+        </Modal>
+
+
       </div>
     );
   };
-  
-  
-  
-  
-  
+
+
+
   
   
   
@@ -1155,6 +1190,17 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
                 <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> {activeBranch}
               </Button>
 
+              {!checkGitTypes() && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    onClick={openHistoryDrawer}
+                    style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
+                  >
+                    <HistoryOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> History
+                  </Button>
+                </div>
+              )}
+
               <Button
                 type="primary"
                 onClick={() => {
@@ -1171,14 +1217,8 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
         </div>
       </div>
 
-    <br/>
-      
-    {!checkGitTypes() && (<Button
-        onClick={openHistoryDrawer}
-        style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
-      >
-        <HistoryOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> git commit history
-      </Button>)}
+
+
 
       <br/>
 
