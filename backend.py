@@ -731,22 +731,22 @@ def get_changed_files(request: FileItem):
 # 링크 받아서 repo check
 @app.get("/api/repo_status")
 async def get_repo_status(request: FileItem):
-    headers = {
-        'Authorization': f'token {request.access_token}',
-    } if request.access_token else {}
-
     try:
-        response = requests.get(request.remote_path, headers=headers)
+        response = requests.get(request.remote_path)
 
         if response.status_code == 200:
             data = response.json()
-            return {request.repo_type: "private" if data['private'] else "public"}
+            
+            if 'private' in data:
+                return {request.repo_type: "private" if data['private'] else "public"}
+            else:
+                raise HTTPException(status_code=500, detail="Invalid response from server")
         elif response.status_code == 404:
             return {'error': 'Repository does not exist or not access have'}
         else:
             return {'error': 'Error occured'}
 
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
