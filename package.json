@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "electron-start": "electron .",
-    "client": " concurrently \"npm install electron\" \"cd frontend && yarn && yarn build\" && concurrently \"cd frontend && serve -s build\" \"uvicorn backend:app --host localhost --port 8000\" \"npm run electron-start\" "
+    "client": " concurrently \"cd frontend && yarn && yarn build\" \"cd frontend && serve -s build\" \"uvicorn backend:app --host localhost --port 8000\" \"npm run electron-start\" ",
+    "dev": "concurrently \"cd frontend && npm start\" \"uvicorn backend:app --host localhost --port 8000\" \"npm run electron-start\""
   },
   "repository": {
     "type": "git",
