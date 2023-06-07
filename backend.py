@@ -400,8 +400,6 @@ async def get_staged_files(repo_path: FileItem):
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return {"message": "Staged files fetched successfully"}
-
 
 @app.post("/api/git_root_path")
 async def get_git_root_path(item: FileItem):
@@ -733,19 +731,16 @@ def get_changed_files(request: FileItem):
 # 링크 받아서 repo check
 @app.get("/api/repo_status")
 async def get_repo_status(request: FileItem):
-    clone_link = request.remote_path
-    access_token = request.access_token
-
     headers = {
-        'Authorization': f'token {access_token}',
-    } if access_token else {}
+        'Authorization': f'token {request.access_token}',
+    } if request.access_token else {}
 
     try:
-        response = requests.get(clone_link, headers=headers)
+        response = requests.get(request.remote_path, headers=headers)
 
         if response.status_code == 200:
             data = response.json()
-            return {"status": "private" if data['private'] else "public"}
+            return {request.repo_type: "private" if data['private'] else "public"}
         elif response.status_code == 404:
             return {'error': 'Repository does not exist or not access have'}
         else:
