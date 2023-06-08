@@ -3,10 +3,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 from typing import List
 from pydantic import BaseModel
 from git import Repo, GitCommandError, InvalidGitRepositoryError, NULL_TREE
+from github import Github
 import os 
 from typing import Optional
 import requests
@@ -400,8 +401,6 @@ async def get_staged_files(repo_path: FileItem):
     except GitCommandError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return {"message": "Staged files fetched successfully"}
-
 
 @app.post("/api/git_root_path")
 async def get_git_root_path(item: FileItem):
@@ -677,7 +676,9 @@ async def get_commit_information(request:FileItem):
             'parent_checksums': [parent.hexsha for parent in commit.parents],
             'author': commit.author.name,
             'commiter': commit.committer.name,
-            'date': commit.authored_datetime.strftime("%Y-%m-%d %H:%M:%S")
+            'date': commit.authored_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+            'commit_message' : commit.message,
+            'email' : commit.author.email 
         }
 
         return commit_info
@@ -731,25 +732,14 @@ def get_changed_files(request: FileItem):
 
 #feature 4 : git clone
 # 링크 받아서 repo check
-@app.get("/api/repo_status")
+@app.post("/api/repo_status")
 async def get_repo_status(request: FileItem):
-    clone_link = request.remote_path
-    access_token = request.access_token
-
-    headers = {
-        'Authorization': f'token {access_token}',
-    } if access_token else {}
-
     try:
-        response = requests.get(clone_link, headers=headers)
+        g = Github(request.access_token)
+        repo = g.get_repo(request.remote_path)
 
-        if response.status_code == 200:
-            data = response.json()
-            return {"status": "private" if data['private'] else "public"}
-        elif response.status_code == 404:
-            return {'error': 'Repository does not exist or not access have'}
-        else:
-            return {'error': 'Error occured'}
+        request.repo_type = "private" if repo.private else "public"
+        return {'repo_type': request.repo_type}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -758,12 +748,16 @@ async def get_repo_status(request: FileItem):
 @app.post("/api/clone_repo")
 async def clone_repo(request: FileItem):
     path = request.path
-    clone_link = request.remote_path
+    remote_path = request.remote_path
     access_token = request.access_token
 
     try:
-        # Clone the repository
-        Repo.clone_from(clone_link, path, env={'GIT_ASKPASS': 'echo', 'GIT_USERNAME': 'git', 'GIT_PASSWORD': access_token} if access_token else None)
+        github = Github(access_token) if access_token else Github()
+        repo_path = urlparse(remote_path).path.lstrip('/')
+        repo = github.get_repo(repo_path)
+
+        Repo.clone_from(repo.clone_url, path,  env={'GIT_ASKPASS': 'echo', 'GIT_USERNAME': 'git', 'GIT_PASSWORD': access_token} if access_token else None)
+
         return {"message": "Repository cloned successfully."}
 
     except Exception as e:

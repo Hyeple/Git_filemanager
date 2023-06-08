@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Modal, Button, Table, Tooltip, Input, message, Breadcrumb, Drawer, Popover } from "antd";
+import { Modal, Button, Table, Tooltip, Input, message, Breadcrumb, Drawer, Spin } from "antd";
 import { PlusOutlined, RedoOutlined, DeleteOutlined, FileTextTwoTone, FolderTwoTone, EditOutlined, FolderOpenTwoTone, BranchesOutlined, FolderAddOutlined, HomeOutlined, CheckOutlined, SendOutlined, MergeCellsOutlined, HistoryOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import styled from "styled-components";
@@ -87,11 +87,11 @@ interface FileTableProps {
   onPathChange: (newDir: string) => string;
 }
 
-//api 요청으로 백엔드에서 file list 호출
+// api 요청으로 백엔드에서 file list 호출
 async function fetchFiles(path: string) {
   try {
     const encodedPath = encodeURIComponent(path);
-    const response = await axios.get(`/api/root_files?path=${encodedPath}`, {
+    const response = await axios.get(`http://localhost:8000/api/root_files?path=${encodedPath}`, {
       withCredentials: true,
     });
 
@@ -309,7 +309,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     setFileList(files as FileTableDataType[]);
   
   // Push the current path to the backend
-    await axios.post("/api/push_path", { path }, {
+    await axios.post("http://localhost:8000/api/push_path", { path }, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -352,7 +352,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const newPath = onPathChange(newPathStack[newPathStack.length - 1]);
   
     path = newPath;
-    axios.post("/api/init_repo", { path: newPath.toString() }, {
+    axios.post("http://localhost:8000/api/init_repo", { path: newPath.toString() }, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -385,7 +385,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
         throw new Error("Git root path not found");
       }
   
-      const response = await axios.post("/api/git_commit", {
+      const response = await axios.post("http://localhost:8000/api/git_commit", {
         git_path: gitRootPath,
         commit_message: newName,
         file_paths: stagedFiles.map(file => file.name.fileName),
@@ -422,7 +422,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   
   const getGitRootPath = async () => {
     try {
-      const response = await axios.post("/api/git_root_path", { path }, {
+      const response = await axios.post("http://localhost:8000/api/git_root_path", { path }, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -454,7 +454,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
         throw new Error("Git root path not found");
       }
 
-      const response = await axios.post("/api/get_staged_files", { path: gitRootPath }, {
+      const response = await axios.post("http://localhost:8000/api/get_staged_files", { path: gitRootPath }, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -489,7 +489,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const git_repository_path = await getGitRootPath();
     try {
       const response = await axios.post(
-        "/api/git_add",
+        "http://localhost:8000/api/git_add",
         { git_path: git_repository_path, file_path: filePath },
         {
           headers: {
@@ -521,7 +521,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const git_repository_path = await getGitRootPath();
     try {
       const response = await axios.post(
-        "/api/git_restore_staged",
+        "http://localhost:8000/api/git_restore_staged",
         { git_path: git_repository_path, file_path: filePath },
         {
           headers: {
@@ -553,7 +553,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const git_repository_path = await getGitRootPath();
     try {
       const response = await axios.post(
-        "/api/git_undo_modify",
+        "http://localhost:8000/api/git_undo_modify",
         { git_path: git_repository_path, file_path: filePath },
         {
           headers: {
@@ -585,7 +585,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const git_repository_path = await getGitRootPath();
     try {
       const response = await axios.post(
-        "/api/git_remove_cached",
+        "http://localhost:8000/api/git_remove_cached",
         { git_path: git_repository_path, file_path: filePath },
         {
           headers: {
@@ -617,7 +617,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const git_repository_path = await getGitRootPath();
     try {
       const response = await axios.post(
-        "/api/git_remove",
+        "http://localhost:8000/api/git_remove",
         { git_path: git_repository_path, file_path: filePath },
         {
           headers: {
@@ -666,54 +666,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
 
   //PROJ2_START
-  //피쳐4 : 현재 문제 아주 많음. api 부터 손봐야할듯?
-  const [isCloneModalVisible, setCloneModalVisible] = useState(false);
-  const [repoUrl, setRepoUrl] = useState("");
-  
-  const openCloneModal = () => {
-    setCloneModalVisible(true);
-  };
-  
-  const closeCloneModal = () => {
-    setCloneModalVisible(false);
-  };
-  
-  const handleRepoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRepoUrl(e.target.value);
-  };
-
-  
-  const getRepoDetails = (repoUrl : string) => {
-    // Assume the URL is of the form "https://github.com/{user}/{repo}"
-    const parts = repoUrl.split('/');
-    return {
-      user: parts[parts.length - 2],
-      repo: parts[parts.length - 1]
-    };
-  };
-
-  const handleCloneRepo = async () => {
-    try {
-      const { user, repo } = getRepoDetails(repoUrl);
-
-      const response = await axios.get(`/repo/${user}/${repo}`);
-
-      if (response.data.message === "This repository is public.") {
-        console.log(`The repository at ${repoUrl} is public.`);
-      } else if (response.data.message === "This repository is private.") {
-        console.log(`The repository at ${repoUrl} is private.`);
-      } else {
-        throw new Error('Could not determine the visibility of the repository.');
-      }
-
-      // Add your cloning logic here
-    } catch (error) {
-      console.error("Error fetching repository visibility:", error);
-      message.error("An error occurred while fetching the repository visibility");
-    }
-
-    closeCloneModal();
-  };
 
   //피쳐1
   // 추가된 상태
@@ -749,7 +701,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     }
     
     try {
-      await axios.post(`/api/branch_create`, {
+      await axios.post(`http://localhost:8000/api/branch_create`, {
         git_path: await getGitRootPath(),
         branch_name: newBranchName
       });
@@ -763,7 +715,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   // 브랜치 목록을 가져온다
   const fetchBranches = async () => {
     try {
-      const response = await axios.post(`/api/branche_get`, {
+      const response = await axios.post(`http://localhost:8000/api/branche_get`, {
         git_path: await getGitRootPath()
       });
       if (response.status === 200) {
@@ -779,7 +731,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   // Fetch active branch
   const fetchActiveBranch = async () => {
     try {
-      const response = await axios.post(`/api/curbranch_get`, {
+      const response = await axios.post(`http://localhost:8000/api/curbranch_get`, {
         git_path: await getGitRootPath()
       });
   
@@ -800,7 +752,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   // 체크아웃을 수행하는 API 호출
   async function checkoutBranch(gitPath: string, branchName: string) {
     try {
-      const response = await axios.post(`/api/branch_checkout`, {
+      const response = await axios.post(`http://localhost:8000/api/branch_checkout`, {
         git_path: gitPath,
         branch_name: branchName
       });
@@ -824,7 +776,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     // 브랜치를 삭제한다
   const handleDeleteBranch = async (branchName: string) => {
     try {
-      await axios.post(`/api/branch_delete`, {
+      await axios.post(`http://localhost:8000/api/branch_delete`, {
         git_path: await getGitRootPath(),
         branch_name: branchName
       });
@@ -838,7 +790,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   // 브랜치 이름을 변경한다
   async function renameBranch(gitPath: string, oldName: string, newName: string) {
     try {
-      const response = await axios.post(`/api/branch_rename`, {
+      const response = await axios.post(`http://localhost:8000/api/branch_rename`, {
         git_path: gitPath,
         old_branch_name: oldName,
         new_branch_name: newName
@@ -862,7 +814,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   //피쳐2를 해볼까요~~~
   async function mergeBranch(gitPath: string, targetBranch: string) {
     try {
-        const response = await axios.post(`/api/branch_merge`, {
+        const response = await axios.post(`http://localhost:8000/api/branch_merge`, {
             git_path: gitPath,
             branch_name: targetBranch
         });
@@ -966,7 +918,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
   async function fetchGitHistory(gitPath: string) {
     try {
-      const response = await axios.post("/api/git_history", { git_path: gitPath });
+      const response = await axios.post("http://localhost:8000/api/git_history", { git_path: gitPath });
       
       if (response.status !== 200) {
         throw new Error(`API request failed with status ${response.status}`);
@@ -1041,7 +993,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const getCommitInfo = async (checksum: string) => {
       try {
           const gitPath = await getGitRootPath();
-          const response = await axios.post('/api/commit_information', { git_path: gitPath, commit_checksum : checksum });
+          const response = await axios.post('http://localhost:8000/api/commit_information', { git_path: gitPath, commit_checksum : checksum });
           return response.data;
       } catch (error) {
           console.error(error);
@@ -1051,7 +1003,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     const getCommitChangedInfo = async (checksum: string) => {
       try {
           const gitPath = await getGitRootPath();
-          const response = await axios.post('/api/changed_files', { git_path: gitPath, commit_checksum : checksum });
+          const response = await axios.post('http://localhost:8000/api/changed_files', { git_path: gitPath, commit_checksum : checksum });
           return response.data;
       } catch (error) {
           console.error(error);
@@ -1142,9 +1094,113 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
     );
   };
 
+    //피쳐4
+    const [isCloneModalVisible, setCloneModalVisible] = useState(false);
+    const [repoUrl, setRepoUrl] = useState("");
+    const [userName, setUserName] = useState("");
+    const [accessToken, setAccessToken] = useState("");
 
-
+    const openCloneModal = () => {
+      const savedUserName = localStorage.getItem('userName');
+      const savedAccessToken = localStorage.getItem('accessToken');
+    
+      // 이전에 저장된 값이 있으면 상태에 설정
+      if (savedUserName) {
+        setUserName(savedUserName);
+      }
+      if (savedAccessToken) {
+        setAccessToken(savedAccessToken);
+      }
+    
+      setCloneModalVisible(true);
+    };
   
+    const closeCloneModal = () => {
+      setCloneModalVisible(false);
+      // 인풋 상태를 초기화합니다.
+      setRepoUrl("");
+      setUserName("");
+      setAccessToken("");
+    };
+    
+  
+    const handleInputChange = (e : any) => {
+      setRepoUrl(e.target.value);
+    };
+
+    const handleUserNameChange = (e : any) => {
+      setUserName(e.target.value);
+    };
+    
+    const handleAccessTokenChange = (e : any) => {
+      setAccessToken(e.target.value);
+    };
+
+    const CloneRepo = async () => {
+      try {
+        const payload : any = {};
+    
+        payload['path'] = path;
+    
+        if (repoUrl) {
+          payload['remote_path'] = repoUrl;
+        }
+    
+        if (accessToken) {
+          payload['access_token'] = accessToken;
+        }
+    
+        const response = await axios.post(`http://localhost:8000/api/clone_repo`, payload);
+    
+        // 성공적으로 클론되면 username과 access token을 로컬 스토리지에 저장
+        localStorage.setItem('userName', userName);
+        localStorage.setItem('accessToken', accessToken);
+    
+        // Fetch the file list again to update the UI.
+        await fetchApi(path);
+    
+        if (response.data.error) {
+          message.error(response.data.error);
+        } else {
+          message.success("Clone Github Repository success");
+        }
+      } catch (error) {
+        message.error("Clone Github Repository failed");
+        console.error(error);
+      }
+    };
+    
+    
+    const checkRepoStatus = async () => {
+      try {
+        const payload : any = {};
+    
+        if (repoUrl) {
+          payload['remote_path'] = repoUrl;
+        }
+        
+        if (accessToken) {
+          payload['access_token'] = accessToken;
+        }
+    
+        const response = await axios.post(`http://localhost:8000/api/repo_status`, payload);
+      
+        if (response.data.error) {
+          message.error(response.data.error);
+        } else {
+          CloneRepo();
+          setCloneModalVisible(false);
+        }
+      } catch (error) {
+        message.error("Repository is private or not found");
+        console.error(error);
+      }
+    };
+    
+    
+
+
+
   
   
   return (
@@ -1238,7 +1294,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
             ? `${path}/${fileToRename.fileName}`.replace(fileToRename.fileName, newName) 
             : '';
         
-          await axios.post(`/api/git_move`, { 
+          await axios.post(`http://localhost:8000/api/git_move`, { 
             git_path: await getGitRootPath(),
             old_file_path: fileToRename ? `${path}/${fileToRename.fileName}` : '', 
             new_file_path: newPath
@@ -1297,17 +1353,37 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       />
     </Modal>
 
-      <Modal
-    title="Clone GitHub Repository"
-    visible={isCloneModalVisible}
-    onOk={handleCloneRepo}
-    onCancel={closeCloneModal}
-  >
-    <Input
-      placeholder="Enter the GitHub repository URL"
-      onChange={handleRepoUrlChange}
-    />
+    <Modal
+        title= <h3>Clone GitHub Repository</h3>
+        visible={isCloneModalVisible}
+        onCancel={() => {
+            closeCloneModal();
+        }}
+        onOk={checkRepoStatus}
+        okButtonProps={{ disabled: !(userName && accessToken) && !(!userName && !accessToken) }}
+    > 
+        <Input
+            style={{ marginBottom: '30px' }}
+            placeholder="Enter the GitHub repository URL ex)Hyeple/Git_filemanager "
+            onChange={handleInputChange}
+            value={repoUrl}
+        />
+        <strong>If the repository is private, you need this information to clone it. </strong>
+
+        <Input
+            style={{marginBottom: '10px', marginTop : '5px', }}
+            placeholder="Enter your username"
+            onChange={handleUserNameChange}
+            value={userName} // userName 상태 값을 사용
+        />
+
+        <Input.Password
+            placeholder="Enter your access token"
+            onChange={handleAccessTokenChange}
+            value={accessToken} // accessToken 상태 값을 사용
+        />
     </Modal>
+
 
       <Modal
         title={<h3>Switch branches</h3>}
