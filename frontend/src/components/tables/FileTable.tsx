@@ -87,7 +87,7 @@ interface FileTableProps {
   onPathChange: (newDir: string) => string;
 }
 
-//api 요청으로 백엔드에서 file list 호출
+// api 요청으로 백엔드에서 file list 호출
 async function fetchFiles(path: string) {
   try {
     const encodedPath = encodeURIComponent(path);
@@ -666,54 +666,6 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
 
   //PROJ2_START
-  //피쳐4 : 현재 문제 아주 많음. api 부터 손봐야할듯?
-  const [isCloneModalVisible, setCloneModalVisible] = useState(false);
-  const [repoUrl, setRepoUrl] = useState("");
-  
-  const openCloneModal = () => {
-    setCloneModalVisible(true);
-  };
-  
-  const closeCloneModal = () => {
-    setCloneModalVisible(false);
-  };
-  
-  const handleRepoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRepoUrl(e.target.value);
-  };
-
-  
-  const getRepoDetails = (repoUrl : string) => {
-    // Assume the URL is of the form "https://github.com/{user}/{repo}"
-    const parts = repoUrl.split('/');
-    return {
-      user: parts[parts.length - 2],
-      repo: parts[parts.length - 1]
-    };
-  };
-
-  const handleCloneRepo = async () => {
-    try {
-      const { user, repo } = getRepoDetails(repoUrl);
-
-      const response = await axios.get(`/repo/${user}/${repo}`);
-
-      if (response.data.message === "This repository is public.") {
-        console.log(`The repository at ${repoUrl} is public.`);
-      } else if (response.data.message === "This repository is private.") {
-        console.log(`The repository at ${repoUrl} is private.`);
-      } else {
-        throw new Error('Could not determine the visibility of the repository.');
-      }
-
-      // Add your cloning logic here
-    } catch (error) {
-      console.error("Error fetching repository visibility:", error);
-      message.error("An error occurred while fetching the repository visibility");
-    }
-
-    closeCloneModal();
-  };
 
   //피쳐1
   // 추가된 상태
@@ -1001,14 +953,29 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
   type GitGraphProps = {
     historyList: CommitData[];
   };
+
+  type CommitInfoType = {
+    commit_checksum: string;
+    parent_checksums: string[];
+    author: string;
+    commiter: string;
+    date: string;
+    email : string;
+    commit_message : string;
+  };
   
+  type FileChangeType = {
+    file_name: string;
+    change_type: string;
+  };
+
   const GitGraph: React.FC<GitGraphProps> = ({ historyList }) => {
     // 중복 제거를 위한 Set을 사용하여 고유한 커밋 식별자 저장
     const uniqueCommits = new Set();
 
     const [popoverVisible, setPopoverVisible] = useState(false);
-    const [commitInfo, setCommitInfo] = useState(null);
-    const [commitChangedInfo, setCommitChangedInfo] = useState(null);
+    const [commitInfo, setCommitInfo] = useState<CommitInfoType | null>(null);
+    const [commitChangedInfo, setCommitChangedInfo] = useState<FileChangeType[] | null>(null);
   
     const handleCommitClick = async (checksum: string) => {
       const commitInfoResponse = await getCommitInfo(checksum);
@@ -1042,7 +1009,8 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
           console.error(error);
       }
     };
-  
+
+
     return (
       <div style={{ width: '200px', height: '300px' }}> {}
 
@@ -1088,28 +1056,129 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
           }}
         </Gitgraph>
 
-        <Popover
-          placement = "right"
-          content={
-            <>
-              <div>Commit Info: {JSON.stringify(commitInfo)}</div>
-              <div>Commit Changed Info: {JSON.stringify(commitChangedInfo)}</div>
-            </>
-          }
-          title="Commit Details"
-          trigger="click"
+        
+
+        <Modal
+          title={`Commit Information`}
           visible={popoverVisible}
-          onVisibleChange={hidePopover}
-        ></Popover>
+          onOk={hidePopover}
+          onCancel={hidePopover}
+          footer={null}
+        >
+        <hr/>
+
+          {commitInfo && (
+            <>
+              <p><strong>commit  </strong> {commitInfo.commit_checksum}</p>
+              <p><strong>Author:</strong> {commitInfo.author}</p>
+              <p><strong>Email:</strong> {commitInfo.email}</p>
+              <p><strong>Date:</strong> {commitInfo.date}</p>
+              <br/>
+              <p><strong>Message:</strong> {commitInfo.commit_message}</p>
+            </>
+          )}
+
+          {commitChangedInfo && (
+            <>
+              {commitChangedInfo.map((file, index) => (
+                <p key={index}><strong>{file.change_type} : </strong> {file.file_name}</p>
+              ))}
+            </>
+          )}
+
+
+        </Modal>
+
+
       </div>
     );
   };
+
+    //피쳐4 : 현재 문제 아주 많음. api 부터 손봐야할듯?
+    const [isCloneModalVisible, setCloneModalVisible] = useState(false);
+    const [repoUrl, setRepoUrl] = useState("");
+    const [userName, setUserName] = useState("");
+    const [accessToken, setAccessToken] = useState("");
+
+    const openCloneModal = () => {
+      setCloneModalVisible(true);
+    };
   
+    const closeCloneModal = () => {
+      setCloneModalVisible(false);
+    };
   
-  
-  
-  
-  
+    const handleInputChange = (e : any) => {
+      setRepoUrl(e.target.value);
+    };
+
+    const handleUserNameChange = (e : any) => {
+      setUserName(e.target.value);
+    };
+    
+    const handleAccessTokenChange = (e : any) => {
+      setAccessToken(e.target.value);
+    };
+
+    const CloneRepo = async () => {
+      try {
+        const payload : any = {};
+        
+        payload['path'] = path;
+    
+        if (repoUrl) {
+          payload['remote_path'] = repoUrl;
+        }
+        
+        if (accessToken) {
+          payload['access_token'] = accessToken;
+        }
+    
+        const response = await axios.post(`http://localhost:8000/api/clone_repo`, payload);
+        // Fetch the file list again to update the UI.
+        await fetchApi(path);
+      
+        if (response.data.error) {
+          message.error(response.data.error);
+        } else {
+
+        }
+      } catch (error) {
+        message.error("실패!@");
+        console.error(error);
+      }
+    };
+    
+    
+    const checkRepoStatus = async () => {
+      try {
+        const payload : any = {};
+    
+        if (repoUrl) {
+          payload['remote_path'] = repoUrl;
+        }
+        
+        if (accessToken) {
+          payload['access_token'] = accessToken;
+        }
+    
+        const response = await axios.post(`http://localhost:8000/api/repo_status`, payload);
+      
+        if (response.data.error) {
+          message.error(response.data.error);
+        } else {
+          CloneRepo();
+        }
+      } catch (error) {
+        message.error("Repository is private or not found");
+        console.error(error);
+      }
+    };
+    
+    
+
+
+
   
   
   return (
@@ -1155,6 +1224,17 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
                 <BranchesOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> {activeBranch}
               </Button>
 
+              {!checkGitTypes() && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    onClick={openHistoryDrawer}
+                    style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
+                  >
+                    <HistoryOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> History
+                  </Button>
+                </div>
+              )}
+
               <Button
                 type="primary"
                 onClick={() => {
@@ -1171,14 +1251,8 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
         </div>
       </div>
 
-    <br/>
-      
-    {!checkGitTypes() && (<Button
-        onClick={openHistoryDrawer}
-        style={{ fontSize: '14px', height: '40px', display: 'flex', alignItems: 'center', marginRight : '10px' }}
-      >
-        <HistoryOutlined style={{ fontSize: '22px', marginRight: '5px' }} /> git commit history
-      </Button>)}
+
+
 
       <br/>
 
@@ -1257,17 +1331,25 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       />
     </Modal>
 
-      <Modal
-    title="Clone GitHub Repository"
-    visible={isCloneModalVisible}
-    onOk={handleCloneRepo}
-    onCancel={closeCloneModal}
-  >
-    <Input
-      placeholder="Enter the GitHub repository URL"
-      onChange={handleRepoUrlChange}
-    />
-    </Modal>
+    <Modal
+        title="Clone GitHub Repository"
+        visible={isCloneModalVisible}
+        onCancel={closeCloneModal}
+        onOk={checkRepoStatus}
+      >
+        <Input
+          placeholder="Enter the GitHub repository URL ex)Hyeple/Git_filemanager "
+          onChange={handleInputChange}
+        />
+        <Input
+          placeholder="Enter your username"
+          onChange={handleUserNameChange}
+        />
+        <Input.Password
+          placeholder="Enter your access token"
+          onChange={handleAccessTokenChange}
+        />
+      </Modal>
 
       <Modal
         title={<h3>Switch branches</h3>}

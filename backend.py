@@ -3,10 +3,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 from typing import List
 from pydantic import BaseModel
 from git import Repo, GitCommandError, InvalidGitRepositoryError, NULL_TREE
+from github import Github
 import os 
 from typing import Optional
 import requests
@@ -729,36 +730,32 @@ def get_changed_files(request: FileItem):
 
 #feature 4 : git clone
 # 링크 받아서 repo check
-@app.get("/api/repo_status")
+@app.post("/api/repo_status")
 async def get_repo_status(request: FileItem):
     try:
-        response = requests.get(request.remote_path)
+        g = Github(request.access_token)
+        repo = g.get_repo(request.remote_path)
 
-        if response.status_code == 200:
-            data = response.json()
-            
-            if 'private' in data:
-                return {request.repo_type: "private" if data['private'] else "public"}
-            else:
-                raise HTTPException(status_code=500, detail="Invalid response from server")
-        elif response.status_code == 404:
-            return {'error': 'Repository does not exist or not access have'}
-        else:
-            return {'error': 'Error occured'}
+        request.repo_type = "private" if repo.private else "public"
+        return {'repo_type': request.repo_type}
 
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/clone_repo")
 async def clone_repo(request: FileItem):
     path = request.path
-    clone_link = request.remote_path
+    remote_path = request.remote_path
     access_token = request.access_token
 
     try:
-        # Clone the repository
-        Repo.clone_from(clone_link, path, env={'GIT_ASKPASS': 'echo', 'GIT_USERNAME': 'git', 'GIT_PASSWORD': access_token} if access_token else None)
+        github = Github(access_token) if access_token else Github()
+        repo_path = urlparse(remote_path).path.lstrip('/')
+        repo = github.get_repo(repo_path)
+
+        Repo.clone_from(repo.clone_url, path,  env={'GIT_ASKPASS': 'echo', 'GIT_USERNAME': 'git', 'GIT_PASSWORD': access_token} if access_token else None)
+
         return {"message": "Repository cloned successfully."}
 
     except Exception as e:
