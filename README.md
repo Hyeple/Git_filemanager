@@ -39,23 +39,23 @@ https://hw-ple.notion.site/OSS-Project-2-138ed9345e89404c96ce6bb5e2c6ce17
 
 <v1.0>
 
-File explorer(File browser)
+- File explorer(File browser)
 
-Git Repository Creation
+- Git Repository Creation
 
-Version Controlling of a Git Repository
+- Version Controlling of a Git Repository
 
+<br/>
 
+<v2.0> 🌟New Update!🌟
 
-<v2.0> New Update!
+- Git branch management
 
-Git branch management
+- Git branch merge (not rebase)
 
-Git branch merge (not rebase)
+- Git commit history
 
-Git commit history
-
-Git clone from Github
+- Git clone from Github
 
 
 <br/>
