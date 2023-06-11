@@ -1,9 +1,22 @@
+
+<div align="center">
+
 # OSS Project : 📁Git_FileManager
 
+ 
 <img src="https://img.shields.io/badge/react-61DAFB?style=flat-square&logo=react&logoColor=white"/> <img src="https://img.shields.io/badge/typescript-3178C6?style=flat-square&logo=typescript&logoColor=white"/>  <img src="https://img.shields.io/badge/python-3776AB?style=flat-square&logo=python&logoColor=white"/>  <img src="https://img.shields.io/badge/electron-47848F?style=flat-square&logo=electron&logoColor=white"/>  
 
-![ezgif com-gif-maker](https://github.com/Hyeple/Git_filemanager/assets/86519064/81033036-f41c-4f96-acdd-84636d0d191f)
-
+ 
+<a href="https://github.com/Hyeple/Git_filemanager/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Hyeple/Git_filemanager" />
+</a>
+ 
+ <br/>
+ 
+ ![ezgif com-gif-maker](https://github.com/Hyeple/Git_filemanager/assets/86519064/81033036-f41c-4f96-acdd-84636d0d191f)
+ 
+ <br/>
+ 
 This program is a Git file manager designed to run on the Windows 10,11 environment. 
 Please run it on a Windows system.
 
@@ -12,7 +25,12 @@ It enables you to manage files on your computer's C drive.
 
 It offers functionalities such as file Git repository initialization, and various Git actions to assist you in file management using Git. 
 
-<br/><br/>
+<br/>
+
+
+ </div>
+ 
+<br/>
 
 
 ## 📄 Documentation
