@@ -37,15 +37,15 @@ pip install -r requirements.txt
 # Run
 **powershell - 1**
 ```bash
-~/projectdirectory  python -m venv venv 
-~/projectdirectory  venv/Scripts/activate    **activate venv**
-(venv)~/projectdirectory  pip install -r requirements.txt
-(venv)~/projectdirectory  uvicorn backend:app --host localhost --port 8000    ** after serve -s build**
+~/projectdirectory/frontend  serve -s build
 ```
 
 **powershell - 2**
 ```bash
-~/projectdirectory/frontend  serve -s build
+~/projectdirectory  python -m venv venv 
+~/projectdirectory  venv/Scripts/activate    **activate venv**
+(venv)~/projectdirectory  pip install -r requirements.txt
+(venv)~/projectdirectory  uvicorn backend:app --host localhost --port 8000    ** after serve -s build**
 ```
 
 **powershell - 3**
