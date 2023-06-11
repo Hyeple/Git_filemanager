@@ -1,6 +1,6 @@
 
 <div align="center">
-
+ 
 # OSS Project : 📁Git_FileManager
 
  
@@ -20,8 +20,12 @@
  
  <br/>
  
-This program is a Git file manager designed to run on the Windows 10,11 environment. 
-Please run it on a Windows system.Git_filemanager is a simple GUI-based git repository management program. It enables you to manage files on your computer's C drive. It offers functionalities such as file Git repository initialization, and various Git actions to assist you in file management using Git. 
+This program is a Git file manager designed to run on the Windows 10,11 environment.
+Please run it on a Windows system. 
+
+Git_filemanager is a simple GUI-based git repository management program. 
+It enables you to manage files on your computer's C drive. 
+It offers functionalities such as file Git repository initialization, and various Git actions to assist you in file management using Git. 
 
 <br/>
 
@@ -39,6 +43,11 @@ https://hw-ple.notion.site/OSS-Project-2-138ed9345e89404c96ce6bb5e2c6ce17
 
 <v1.0>
 
+📎**Download Link**
+
+```v1.0``` https://github.com/Hyeple/Git_filemanager/releases/tag/v1.0
+
+
 - File explorer(File browser)
 
 - Git Repository Creation
@@ -47,7 +56,12 @@ https://hw-ple.notion.site/OSS-Project-2-138ed9345e89404c96ce6bb5e2c6ce17
 
 <br/>
 
+
 <v2.0> 🌟New Update!🌟
+
+📎**Download Link**
+
+```v2.0``` https://github.com/Hyeple/Git_filemanager/releases/tag/v2.0
 
 - Git branch management
 
