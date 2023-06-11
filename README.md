@@ -15,6 +15,9 @@
  
  ![ezgif com-gif-maker](https://github.com/Hyeple/Git_filemanager/assets/86519064/81033036-f41c-4f96-acdd-84636d0d191f)
  
+ 
+ </div>
+ 
  <br/>
  
 This program is a Git file manager designed to run on the Windows 10,11 environment. 
@@ -28,7 +31,6 @@ It offers functionalities such as file Git repository initialization, and variou
 <br/>
 
 
- </div>
  
 <br/>
 
