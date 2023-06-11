@@ -6,6 +6,8 @@ Please run it on a Windows system.
 It enables you to manage files on your computer's C drive. 
 It offers functionalities such as file exploration, Git repository initialization, and various Git actions to assist you in file management using Git.
 
+## Documentation
+https://hw-ple.notion.site/OSS-Project-2-138ed9345e89404c96ce6bb5e2c6ce17
 
 ## Installation
 
