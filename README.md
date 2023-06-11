@@ -4,8 +4,7 @@
 # OSS Project : 📁Git_FileManager
 
  
-<img src="https://img.shields.io/badge/react-61DAFB?style=flat-square&logo=react&logoColor=white"/> <img src="https://img.shields.io/badge/typescript-3178C6?style=flat-square&logo=typescript&logoColor=white"/>  <img src="https://img.shields.io/badge/python-3776AB?style=flat-square&logo=python&logoColor=white"/>  <img src="https://img.shields.io/badge/electron-47848F?style=flat-square&logo=electron&logoColor=white"/>  
-
+<img src="https://img.shields.io/badge/react-61DAFB?style=flat-square&logo=react&logoColor=white"/> <img src="https://img.shields.io/badge/typescript-3178C6?style=flat-square&logo=typescript&logoColor=white"/>  <img src="https://img.shields.io/badge/python-3776AB?style=flat-square&logo=python&logoColor=white"/>  <img src="https://img.shields.io/badge/fastapi-009688?style=flat-square&logo=fastapi&logoColor=white"/>   <img src="https://img.shields.io/badge/electron-47848F?style=flat-square&logo=electron&logoColor=white"/>  
  
 <a href="https://github.com/Hyeple/Git_filemanager/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=Hyeple/Git_filemanager" />
