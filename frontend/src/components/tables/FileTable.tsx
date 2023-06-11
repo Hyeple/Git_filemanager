@@ -707,7 +707,10 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       });
       setNewBranchName("");
       fetchBranches(); // 브랜치 목록을 갱신한다
+       message.success(`Create branch successfully`);
+
     } catch (error) {
+      message.error("Error creating branch");
       console.error("Error creating branch:", error);
     }
   };
@@ -766,6 +769,7 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       // 파일 리스트 다시 불러오기
       await fetchApi(path);
       console.log("Response data:", data);
+      message.success(`Checkout to ${branchName} completed successfully`);
 
       return data;
     } catch (error) {
@@ -782,7 +786,9 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
       });
       // After deletion, update the branch list
       fetchBranches();
+      message.success(`Delete ${branchName} completed successfully`);
     } catch (error) {
+      message.error("Error deleting branch");
       console.error("Error deleting branch:", error);
     }
   };
@@ -802,9 +808,11 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
       const data = response.data;
       console.log("Response data:", data);
+      message.success(`Rename ${oldName} to ${newName} completed successfully`);
 
       return data;
     } catch (error) {
+      message.error("Error renaming branch");
       console.error("Error renaming branch:", error);
       return null;
     }
@@ -812,32 +820,34 @@ export default function FileTable( { path, onPathChange }: FileTableProps) {
 
 
   //피쳐2를 해볼까요~~~
-  async function mergeBranch(gitPath: string, targetBranch: string) {
+  async function mergeBranch(gitPath: string, targetBranchName: string) {
     try {
-        const response = await axios.post(`http://localhost:8000/api/branch_merge`, {
-            git_path: gitPath,
-            branch_name: targetBranch
-        });
+      const response = await axios.post(`http://localhost:8000/api/branch_merge`, {
+        git_path: gitPath,
+        branch_name: targetBranchName
+      });
   
-        if (response.status !== 200) {
-            throw new Error(`API request failed with status ${response.status}`);
-        }
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
   
-        message.success("Merge Success!");
-        return response.data;
-    } catch (error) {
-        if (axios.isAxiosError(error) && error.response && 
-        error.response.status === 500 && error.response.headers["unmerged_paths"]) {
-            const unmergedPaths = error.response.headers["unmerged_paths"];
-            
-            message.error("Merge Conflict...");
-            message.error(`Unmerged paths: ${unmergedPaths}`)
-        } else {
-            console.error("Error merging branch:", error);
-        }
-        return null;
+      const data = response.data;
+      console.log("Response data:", data);
+      message.success("Branch merged successfully");
+  
+      return data;
+    } catch (error : any) {
+      console.error("Error merging branch:", error);
+  
+      message.error(`Merge Conflict in ${error.response.data.detail.unmerged_paths}`)
+      console.error("Unmerged paths:", error.response.data.detail.unmerged_paths);
+      
+  
+      return null;
     }
-}
+  }
+  
+
   // Modify the branchColumns to include a checkmark for the active branch
   const branchColumns = [
     {

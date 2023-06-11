@@ -43,7 +43,6 @@
     "function-bind": "^1.1.1",
     "get-intrinsic": "^1.2.1",
     "get-stream": "^5.2.0",
-    "electron": "^25.1.0",
     "global-agent": "^3.0.0",
     "globalthis": "^1.0.3",
     "got": "^11.8.6",

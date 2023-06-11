@@ -615,9 +615,10 @@ async def branch_merge(request: FileItem):
             if entry.stage != 0 and entry.path not in unmerged_paths:
                 unmerged_paths.append(entry.path)    
         repo.git.merge("--abort")
-        raise HTTPException(status_code=500, detail="Merge failed", headers={"unmerged_paths": ",".join(unmerged_paths)})    
+        raise HTTPException(status_code=500, detail={"error": "Merge failed", "unmerged_paths": unmerged_paths})  
 
     return {"message": "Branch merged successfully"}
+
 
 
 # feature 3 : git history
