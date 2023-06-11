@@ -21,12 +21,7 @@
  <br/>
  
 This program is a Git file manager designed to run on the Windows 10,11 environment. 
-Please run it on a Windows system.
-
-Git_filemanager is a simple GUI-based git repository management program. 
-It enables you to manage files on your computer's C drive. 
-
-It offers functionalities such as file Git repository initialization, and various Git actions to assist you in file management using Git. 
+Please run it on a Windows system.Git_filemanager is a simple GUI-based git repository management program. It enables you to manage files on your computer's C drive. It offers functionalities such as file Git repository initialization, and various Git actions to assist you in file management using Git. 
 
 <br/>
 
