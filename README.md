@@ -4,7 +4,7 @@
 # OSS Project : 📁Git_FileManager
 
  
-<img src="https://img.shields.io/badge/react-61DAFB?style=flat-square&logo=react&logoColor=white"/> <img src="https://img.shields.io/badge/typescript-3178C6?style=flat-square&logo=typescript&logoColor=white"/>  <img src="https://img.shields.io/badge/python-3776AB?style=flat-square&logo=python&logoColor=white"/>  <img src="https://img.shields.io/badge/fastapi-009688?style=flat-square&logo=fastapi&logoColor=white"/>   <img src="https://img.shields.io/badge/electron-47848F?style=flat-square&logo=electron&logoColor=white"/>  
+<img src="https://img.shields.io/badge/node.js-339933?style=flat-square&logo=node.js&logoColor=white"/>  <img src="https://img.shields.io/badge/react-61DAFB?style=flat-square&logo=react&logoColor=white"/> <img src="https://img.shields.io/badge/typescript-3178C6?style=flat-square&logo=typescript&logoColor=white"/>  <img src="https://img.shields.io/badge/python-3776AB?style=flat-square&logo=python&logoColor=white"/>  <img src="https://img.shields.io/badge/fastapi-009688?style=flat-square&logo=fastapi&logoColor=white"/>   <img src="https://img.shields.io/badge/electron-47848F?style=flat-square&logo=electron&logoColor=white"/>  
  
 <a href="https://github.com/Hyeple/Git_filemanager/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=Hyeple/Git_filemanager" />
@@ -19,7 +19,7 @@
  
  <br/>
  
-This program is a Git file manager designed to run on the Windows 10,11 environment.
+This program is a Git file manager designed to run on the <img src="https://img.shields.io/badge/windows_10,_11-0078D6?style=flat-square&logo=windows&logoColor=white"/> environment.
 Please run it on a Windows system. 
 
 Git_filemanager is a simple GUI-based git repository management program. 
@@ -34,7 +34,7 @@ It offers functionalities such as file Git repository initialization, and variou
 
 
 ## 📄 Documentation
-https://hw-ple.notion.site/OSS-Project-2-138ed9345e89404c96ce6bb5e2c6ce17
+<img src="https://img.shields.io/badge/notion-000000?style=flat-square&logo=notion&logoColor=white"/> https://hw-ple.notion.site/OSS-Project-2-138ed9345e89404c96ce6bb5e2c6ce17
 
 <br/>
 
