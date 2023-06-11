@@ -1,14 +1,24 @@
 # OSS Project : 📁Git_FileManager
 
+<img src="https://img.shields.io/badge/react-61DAFB?style=flat-square&logo=react&logoColor=white"/> <img src="https://img.shields.io/badge/typescript-3178C6?style=flat-square&logo=typescript&logoColor=white"/>  <img src="https://img.shields.io/badge/python-3776AB?style=flat-square&logo=python&logoColor=white"/>  <img src="https://img.shields.io/badge/electron-47848F?style=flat-square&logo=electron&logoColor=white"/>  
+
+![ezgif com-gif-maker](https://github.com/Hyeple/Git_filemanager/assets/86519064/81033036-f41c-4f96-acdd-84636d0d191f)
+
 This program is a Git file manager designed to run on the Windows 10,11 environment. 
 Please run it on a Windows system.
 
+Git_filemanager is a simple GUI-based git repository management program. 
 It enables you to manage files on your computer's C drive. 
-It offers functionalities such as file exploration, Git repository initialization, and various Git actions to assist you in file management using Git.
+
+It offers functionalities such as file Git repository initialization, and various Git actions to assist you in file management using Git. 
+
+<br/><br/>
+
 
 ## 📄 Documentation
 https://hw-ple.notion.site/OSS-Project-2-138ed9345e89404c96ce6bb5e2c6ce17
 
+<br/>
 
 ## 🔎 Functions
 
@@ -19,7 +29,6 @@ File explorer(File browser)
 Git Repository Creation
 
 Version Controlling of a Git Repository
-
 
 
 
@@ -34,6 +43,8 @@ Git commit history
 Git clone from Github
 
 
+<br/>
+
 
 ## 💻 Installation
 
@@ -44,6 +55,9 @@ https://wikidocs.net/8
 
 ### [node - Installation method] 
 https://offbyone.tistory.com/441
+
+
+<br/>
 
 
  ## 📖 Libraries
@@ -62,7 +76,10 @@ pip install -r requirements.txt
 
 
 
-# ⚙️ Execution
+<br/>
+
+
+## ⚙️ Execution
 
 **powershell - 1**
 ```bash
@@ -89,3 +106,5 @@ pip install -r requirements.txt
 ![image](https://github.com/Hyeple/Git_filemanager/assets/102994654/dbe7ad0a-b154-41d4-b6d7-9ba869c1f55d)
 
 If you see a screen like this, it means that it has been executed correctly.
+
+
