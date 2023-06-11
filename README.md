@@ -6,10 +6,36 @@ Please run it on a Windows system.
 It enables you to manage files on your computer's C drive. 
 It offers functionalities such as file exploration, Git repository initialization, and various Git actions to assist you in file management using Git.
 
-## Documentation
+## 📄 Documentation
 https://hw-ple.notion.site/OSS-Project-2-138ed9345e89404c96ce6bb5e2c6ce17
 
-## Installation
+
+## 🔎 Functions
+
+<v1.0>
+
+File explorer(File browser)
+
+Git Repository Creation
+
+Version Controlling of a Git Repository
+
+
+
+
+<v2.0> New Update!
+
+Git branch management
+
+Git branch merge (not rebase)
+
+Git commit history
+
+Git clone from Github
+
+
+
+## 💻 Installation
 
 ### lists
 
@@ -20,7 +46,7 @@ https://wikidocs.net/8
 https://offbyone.tistory.com/441
 
 
- ## Libraries
+ ## 📖 Libraries
  
  |libraries|description|
  |---|-----|
@@ -30,13 +56,14 @@ https://offbyone.tistory.com/441
  |[**electron**](https://github.com/electron/electron)|The Electron framework lets you write cross-platform desktop applications using JavaScript, HTML and CSS. It is based on Node.js and Chromium and is used by the Atom editor and many other apps.|
  
 
-**Installation**
+**📌 Installation**
 
 pip install -r requirements.txt
 
 
 
-# Run
+# ⚙️ Execution
+
 **powershell - 1**
 ```bash
 ~/projectdirectory/frontend  serve -s build
