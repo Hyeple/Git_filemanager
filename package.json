@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "electron-start": "electron .",
-    "client": " concurrently \"cd frontend && yarn && yarn build\" \"cd frontend && serve -s build\" \"uvicorn backend:app --host localhost --port 8000\" \"npm run electron-start\" ",
+    "client": " concurrently \"cd frontend && serve -s build\" \"uvicorn backend:app --host localhost --port 8000\" \"npm run electron-start\" ",
     "dev": "concurrently \"cd frontend && npm start\" \"uvicorn backend:app --host localhost --port 8000\" \"npm run electron-start\""
   },
   "repository": {
@@ -29,7 +29,7 @@
     "cacheable-lookup": "^5.0.4",
     "cacheable-request": "^7.0.2",
     "clone-response": "^1.0.3",
-    "concurrently": "^8.1.0",
+    "concurrently": "^8.2.0",
     "debug": "^4.3.4",
     "decompress-response": "^6.0.0",
     "defer-to-connect": "^2.0.1",
