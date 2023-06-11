@@ -4,9 +4,7 @@
   "description": "This program is a Git file manager designed to run on the Windows environment. \r Please run it on a Windows system.",
   "main": "main.js",
   "scripts": {
-    "electron-start": "electron .",
-    "client": " concurrently \"cd frontend && serve -s build\" \"uvicorn backend:app --host localhost --port 8000\" \"npm run electron-start\" ",
-    "dev": "concurrently \"cd frontend && npm start\" \"uvicorn backend:app --host localhost --port 8000\" \"npm run electron-start\""
+    "electron-start": "electron ."
   },
   "repository": {
     "type": "git",
@@ -20,7 +18,7 @@
   },
   "homepage": "https://github.com/Hyeple/Git_filemanager#readme",
   "devDependencies": {
-    "electron": "^25.0.1"
+    "electron": "^25.1.0"
   },
   "dependencies": {
     "axios": "^1.4.0",
@@ -45,6 +43,7 @@
     "function-bind": "^1.1.1",
     "get-intrinsic": "^1.2.1",
     "get-stream": "^5.2.0",
+    "electron": "^25.1.0",
     "global-agent": "^3.0.0",
     "globalthis": "^1.0.3",
     "got": "^11.8.6",
