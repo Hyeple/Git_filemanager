@@ -48,10 +48,26 @@ It offers functionalities such as file Git repository initialization, and variou
 
 
 - File explorer(File browser)
+  > This program provides a GUI for browsing files and directories on your computer's C drive.
+  >
+	- The file browsing starts from the C drive.
+	- A user can browse a directory by clicking.
 
-- Git Repository Creation
+- Git Repository Creation 
+  > The service supports to turn any local directory into a git repo.
+  > 
+	- It provides a menu for a git repo creation only if a current directory in the browser is not managed by git yet.
 
 - Version Controlling of a Git Repository
+  > This program can execute the following **git command**
+    - `git init`
+    - `git add`             
+    - `git commit`              
+    - `git mv`
+    - `git rm`             
+    - `git rm —cached` 
+    - `git restore`    
+    - `git restore —staged`
 
 <br/>
 
@@ -64,12 +80,37 @@ It offers functionalities such as file Git repository initialization, and variou
 
 - Git branch management
 
+  > This program supports the branch management of a git repository
+  > 
+	- `git branch {branch_name}`
+    - `git branch -D {branch_name}`
+    - `git branch -m {old_name} {new_name}`
+    - `git checkout {branch_name}`
+    - `git merge {branch_name}`
+        
 - Git branch merge (not rebase)
+
+  > This program supports to merge two branches
+  > 
+    - It provides a menu to merge a target branch to the current branch.
+    - It provides branch list to user
+    - It then attempts to merge the selected branches
+    - If success, It provides the user with a success message
+    - Otherwise, It provides the user with an error message
+    - If the merge is failed due to conflict, it provides the user with unmerged paths and simply aborts the merge process
 
 - Git commit history
 
-- Git clone from Github
+  > This program shows the commit history of a project in the form of a simplified graph
+  >
+	- Each commit object in the graph includes its author name and message.
+    - If a user chooses a commit object, then it provides the detailed information about the commit	
 
+- Git clone from Github
+  > The service provides a functionality to clone a git repo from Github to local
+  >
+	- When cloning a public repo, you only need to enter the address of the remote repo.
+	- When cloning a private repo, you must enter the user's name and access token, not just the address of the remote repo.
 
 <br/>
 
@@ -115,7 +156,7 @@ pip install -r requirements.txt
 ```
 
  
-- **⚠️ If the command "serve-s build" doesn't work, check your computer's firewall or security program first. If you still have problems afterwards, type in the commands below in order.**
+- **⚠️ If the command "serve-s build" doesn't work, check your computer's firewall or security program first. If you still have problems afterwards, type in the commands below in order.⚠️**
 ```bash
 ~/projectdirectory/frontend> yarn
 ~/projectdirectory/frontend> npm install
