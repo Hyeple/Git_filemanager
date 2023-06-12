@@ -109,24 +109,35 @@ pip install -r requirements.txt
 
 ## ⚙️ Execution
 
-**powershell - 1**
+- **powershell - 1**
 ```bash
 ~/projectdirectory/frontend  serve -s build
 ```
 
-**powershell - 2**
+ 
+- **⚠️ If the command "serve-s build" doesn't work, check your computer's firewall or security program first. If you still have problems afterwards, type in the commands below in order.**
 ```bash
-~/projectdirectory  python -m venv venv 
-~/projectdirectory  venv/Scripts/activate    **activate venv**
-(venv)~/projectdirectory  pip install -r requirements.txt
-(venv)~/projectdirectory  uvicorn backend:app --host localhost --port 8000    ** after serve -s build**
+~/projectdirectory/frontend> yarn
+~/projectdirectory/frontend> npm install
+~/projectdirectory/frontend> yarn build
+~/projectdirectory/frontend> serve -s build
 ```
 
-**powershell - 3**
-```bash
-~/projectdirectory  npm install electron
-~/projectdirectory  npm run electron-start
-```
+
+- **powershell - 2**
+ ```bash
+ ~/projectdirectory>  python -m venv venv 
+ ~/projectdirectory> venv/Scripts/activate    **activate venv**
+ (venv)~/projectdirectory>  pip install -r requirements.txt
+ (venv)~/projectdirectory>  uvicorn backend:app --host localhost --port 8000    ** after serve -s build**
+ ```
+ 
+
+- **powershell - 3**
+ ```bash
+ ~/projectdirectory>  npm install electron
+ ~/projectdirectory>  npm run electron-start
+ ```
 
 
 
